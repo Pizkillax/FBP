@@ -1,29 +1,34 @@
-FARMACIA BAIONA — PWA v0.4.0
+FARMACIA BAIONA — FBP v0.5.0
 
 NOVEDAD ÚNICA
-- Cada dispensación puede estar Pendiente, Disponible o Retirada.
-- En la ficha del medicamento, una dispensación disponible puede marcarse como recogida.
-- Antes de marcarla se solicita confirmación.
-- Una dispensación retirada deja de aparecer en «Hoy puedes recoger».
-- Las retiradas quedan guardadas únicamente en el dispositivo.
-- Al importar otro JSON se conservan las retiradas que coincidan por medicamento + fecha de activación.
-- Puede corregirse un error con «Marcar de nuevo como pendiente».
+- Actualización directa mediante código QR.
+- El programa de la farmacia genera un QR con todas las dispensaciones.
+- El paciente lo escanea con la cámara del móvil.
+- FBP se abre y solicita confirmación antes de actualizar.
+- Los datos viajan comprimidos dentro del propio QR.
+- El QR no sube los datos del paciente a ningún servidor.
+- Al actualizar se conservan las retiradas que coincidan por medicamento + fecha de activación.
 
 SE MANTIENE SIN CAMBIOS
-- El mismo formato JSON.
+- Importación manual de JSON.
 - Pantalla Inicio.
 - Listado completo.
 - Buscador.
 - Ficha del medicamento.
+- Estados Pendiente, Disponible y Retirado.
 - Instalación como PWA.
-- Sin servidor, cuentas ni sincronización.
+- Funcionamiento sin conexión.
+- Sin cuentas ni sincronización.
 
-PRUEBA EN WINDOWS
-1. Sustituye la carpeta anterior por esta.
-2. Ejecuta dentro de la carpeta:
-   python -m http.server 8000
-3. Abre:
-   http://localhost:8000
-4. Pulsa Ctrl + F5.
-5. Abre un medicamento con una dispensación disponible.
-6. Pulsa «Ya la he recogido».
+PUBLICACIÓN EN GITHUB
+1. Sustituye en el repositorio FBP los seis archivos por los de esta carpeta.
+2. Confirma los cambios.
+3. Espera a que GitHub Pages termine de publicar.
+4. Cierra y vuelve a abrir FBP para recibir la nueva versión.
+
+PRUEBA DEL QR
+1. Procesa un PDF en el programa de la farmacia.
+2. Pulsa «Enviar a FBP».
+3. Escanea el QR con la cámara del iPhone.
+4. Confirma la actualización.
+5. Comprueba que se mantienen las retiradas anteriores que coincidan.
