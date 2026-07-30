@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#2E7D32">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Farmacia Baiona">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <title>Farmacia Baiona - Tus recetas</title>
+  <style>
+    :root {
+      --verde: #2E7D32;
+      --verde-claro: #E8F5E9;
+      --fondo: #F5F7F5;
+      --texto: #202124;
+      --gris: #6B7280;
+      --borde: #D9E1D9;
+      --blanco: #FFFFFF;
+      --rojo: #B3261E;
+      --naranja: #B06000;
+      --naranja-claro: #FFF4E5;
+      --gris-retirada: #6B7280;
+      --gris-retirada-claro: #EEF0F2;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      background: var(--fondo);
+      color: var(--texto);
+    }
+
+    header {
+      background: var(--verde);
+      color: white;
+      padding: calc(18px + env(safe-area-inset-top)) 18px 18px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 2px 8px rgba(0,0,0,.14);
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.35rem;
+    }
+
+    header p {
+      margin: 5px 0 0;
+      opacity: .9;
+      font-size: .92rem;
+    }
+
+    main {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 16px 14px calc(88px + env(safe-area-inset-bottom));
+    }
+
+    .panel {
+      background: var(--blanco);
+      border: 1px solid var(--borde);
+      border-radius: 15px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.04);
+    }
+
+    .acciones {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    button, .boton-archivo {
+      appearance: none;
+      border: none;
+      border-radius: 12px;
+      min-height: 48px;
+      padding: 12px 16px;
+      font-size: 1rem;
+      font-weight: 650;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .primario, .boton-archivo {
+      background: var(--verde);
+      color: white;
+    }
+
+    .secundario {
+      background: var(--verde-claro);
+      color: var(--verde);
+    }
+
+    .peligro {
+      background: #FCE8E6;
+      color: var(--rojo);
+    }
+
+    input[type=file] { display: none; }
+
+    input[type=search] {
+      width: 100%;
+      min-height: 46px;
+      border: 1px solid var(--borde);
+      border-radius: 12px;
+      padding: 10px 13px;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    input[type=search]:focus {
+      border-color: var(--verde);
+      box-shadow: 0 0 0 3px rgba(46,125,50,.12);
+    }
+
+    .paciente {
+      font-size: 1.08rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .meta {
+      color: var(--gris);
+      font-size: .9rem;
+    }
+
+    .saludo {
+      font-size: 1.32rem;
+      font-weight: 800;
+      margin: 0 0 6px;
+    }
+
+    .subtitulo-inicio {
+      color: var(--gris);
+      margin: 0;
+    }
+
+    .resumen-principal {
+      text-align: center;
+      padding: 22px 16px;
+    }
+
+    .resumen-icono {
+      font-size: 2.3rem;
+      margin-bottom: 8px;
+    }
+
+    .resumen-titulo {
+      margin: 0;
+      color: var(--verde);
+      font-size: 1.25rem;
+    }
+
+    .resumen-fecha {
+      margin: 8px 0 14px;
+      font-size: 1.02rem;
+      font-weight: 700;
+    }
+
+    .resumen-contador {
+      color: var(--gris);
+      margin-top: 10px;
+      font-size: .92rem;
+    }
+
+    .medicamento-destacado {
+      border: 1px solid var(--borde);
+      border-radius: 13px;
+      padding: 13px 14px;
+      margin-top: 8px;
+      font-weight: 750;
+      background: var(--blanco);
+    }
+
+    .fecha-grupo {
+      margin-top: 18px;
+    }
+
+    .fecha-titulo {
+      color: var(--verde);
+      font-size: 1rem;
+      font-weight: 800;
+      margin: 0 0 8px;
+    }
+
+    .medicamento {
+      border: 1px solid var(--borde);
+      background: white;
+      border-radius: 13px;
+      padding: 13px 14px;
+      margin-bottom: 8px;
+    }
+
+    .medicamento strong {
+      display: block;
+      line-height: 1.28;
+    }
+
+    .etiqueta {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: var(--verde-claro);
+      color: var(--verde);
+      font-size: .78rem;
+      font-weight: 700;
+    }
+
+    .etiqueta-proxima {
+      background: var(--naranja-claro);
+      color: var(--naranja);
+    }
+
+    .etiqueta-retirada {
+      background: var(--gris-retirada-claro);
+      color: var(--gris-retirada);
+    }
+
+    .medicamento.retirada {
+      background: #FAFBFA;
+      color: var(--gris-retirada);
+    }
+
+    .vacio {
+      text-align: center;
+      padding: 24px 10px;
+      color: var(--gris);
+    }
+
+    .oculto { display: none !important; }
+
+    .aviso {
+      border-left: 4px solid var(--verde);
+      background: var(--verde-claro);
+      padding: 12px 13px;
+      border-radius: 10px;
+      margin-top: 12px;
+      font-size: .92rem;
+    }
+
+    .medicamento,
+    .medicamento-destacado {
+      cursor: pointer;
+    }
+
+    .medicamento:active,
+    .medicamento-destacado:active {
+      transform: scale(.995);
+    }
+
+    .detalle-cabecera {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .volver-btn {
+      min-height: 42px;
+      padding: 9px 13px;
+      background: var(--verde-claro);
+      color: var(--verde);
+      flex: 0 0 auto;
+    }
+
+    .detalle-titulo {
+      margin: 0;
+      font-size: 1.12rem;
+      line-height: 1.3;
+    }
+
+    .detalle-resumen {
+      text-align: center;
+    }
+
+    .detalle-numero {
+      font-size: 2.25rem;
+      font-weight: 850;
+      color: var(--verde);
+      line-height: 1;
+      margin-bottom: 7px;
+    }
+
+    .detalle-texto {
+      color: var(--gris);
+      margin: 0;
+    }
+
+    .progreso-dispensaciones {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .punto-dispensacion {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #D6DBD6;
+      border: 2px solid #C1C8C1;
+    }
+
+    .punto-dispensacion.disponible {
+      background: var(--verde);
+      border-color: var(--verde);
+    }
+
+    .punto-dispensacion.retirada {
+      background: var(--gris-retirada);
+      border-color: var(--gris-retirada);
+    }
+
+    .punto-dispensacion.ultima {
+      background: var(--rojo);
+      border-color: var(--rojo);
+    }
+
+    .fila-dispensacion {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid var(--borde);
+      border-radius: 13px;
+      padding: 13px 14px;
+      margin-bottom: 9px;
+      background: white;
+    }
+
+    .fila-fecha {
+      font-weight: 750;
+    }
+
+    .fila-dispensacion.retirada {
+      background: #FAFBFA;
+      color: var(--gris-retirada);
+    }
+
+    .fila-dispensacion-contenido {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .fila-dispensacion-estado {
+      margin-top: 7px;
+    }
+
+    .accion-dispensacion {
+      min-height: 34px;
+      padding: 6px 10px;
+      font-size: .80rem;
+      flex: 0 0 auto;
+    }
+
+    .accion-secundaria{
+      background: var(--gris-retirada-claro);
+      color: var(--gris-retirada);
+    }
+
+    @media (max-width: 480px) {
+      .fila-dispensacion {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .accion-dispensacion {
+        width: 100%;
+      }
+    }
+
+    .aviso-ultima {
+      border-left: 4px solid var(--naranja);
+      background: var(--naranja-claro);
+      color: #744000;
+      padding: 12px 13px;
+      border-radius: 10px;
+      margin-top: 14px;
+      font-weight: 650;
+    }
+
+    .navegacion {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 20;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      background: white;
+      border-top: 1px solid var(--borde);
+      padding-bottom: env(safe-area-inset-bottom);
+      box-shadow: 0 -2px 10px rgba(0,0,0,.08);
+    }
+
+    .nav-btn {
+      border-radius: 0;
+      min-height: 62px;
+      background: white;
+      color: var(--gris);
+      padding: 8px 4px;
+      font-size: .83rem;
+      font-weight: 700;
+    }
+
+    .nav-btn span {
+      display: block;
+      font-size: 1.3rem;
+      margin-bottom: 2px;
+    }
+
+    .nav-btn.activo {
+      color: var(--verde);
+      background: var(--verde-claro);
+    }
+
+    @media (min-width: 580px) {
+      .acciones {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Farmacia Baiona</h1>
+    <p>Tus recetas</p>
+  </header>
+
+  <main>
+    <section class="panel">
+      <div class="acciones">
+        <label class="boton-archivo" for="archivoJson">📂 Importar archivo JSON</label>
+        <input id="archivoJson" type="file" accept=".json,application/json">
+        <button id="instalarBtn" class="secundario oculto">📱 Instalar aplicación</button>
+        <button id="borrarBtn" class="peligro oculto">🗑️ Borrar datos del teléfono</button>
+      </div>
+      <div class="aviso">
+        Los datos se guardan únicamente en este dispositivo. Esta versión no los envía a ningún servidor.
+      </div>
+    </section>
+
+    <section id="datosPaciente" class="panel oculto">
+      <div id="nombrePaciente" class="paciente"></div>
+      <div id="fechaGeneracion" class="meta"></div>
+    </section>
+
+    <section id="vistaInicio">
+      <section id="inicioSinDatos" class="panel">
+        <div class="vacio">Importa el archivo JSON generado por el programa de la farmacia.</div>
+      </section>
+
+      <section id="inicioConDatos" class="oculto">
+        <section class="panel">
+          <h2 id="saludoPaciente" class="saludo"></h2>
+          <p class="subtitulo-inicio">Aquí tienes el estado de tus próximas recetas.</p>
+        </section>
+
+        <section class="panel resumen-principal">
+          <div id="resumenIcono" class="resumen-icono">💊</div>
+          <h2 id="resumenTitulo" class="resumen-titulo"></h2>
+          <div id="resumenFecha" class="resumen-fecha"></div>
+          <div id="resumenMedicamentos"></div>
+          <div id="resumenContador" class="resumen-contador"></div>
+        </section>
+      </section>
+    </section>
+
+    <section id="vistaTodas" class="oculto">
+      <section class="panel">
+        <div id="listadoTodas" class="vacio">Importa un archivo para ver las recetas.</div>
+      </section>
+    </section>
+
+    <section id="vistaBuscar" class="oculto">
+      <section id="busquedaPanel" class="panel">
+        <input id="busqueda" type="search" placeholder="Buscar medicamento…" autocomplete="off">
+      </section>
+      <section class="panel">
+        <div id="listadoBusqueda" class="vacio">Escribe el nombre de un medicamento.</div>
+      </section>
+    </section>
+
+    <section id="vistaDetalle" class="oculto">
+      <section class="panel">
+        <div class="detalle-cabecera">
+          <button id="volverDetalleBtn" class="volver-btn">← Volver</button>
+          <h2 id="detalleNombre" class="detalle-titulo"></h2>
+        </div>
+      </section>
+
+      <section class="panel detalle-resumen">
+        <div id="detalleNumero" class="detalle-numero"></div>
+        <p id="detalleTexto" class="detalle-texto"></p>
+        <div id="detalleProgreso" class="progreso-dispensaciones"></div>
+        <div id="detalleAvisoUltima" class="aviso-ultima oculto">
+          Esta es la última dispensación disponible. Conviene revisar la continuidad del tratamiento antes de que se agote.
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2 class="fecha-titulo">Dispensaciones</h2>
+        <div id="detalleFechas"></div>
+      </section>
+    </section>
+  </main>
+
+  <nav class="navegacion" aria-label="Navegación principal">
+    <button class="nav-btn activo" data-vista="inicio"><span>🏠</span>Inicio</button>
+    <button class="nav-btn" data-vista="todas"><span>📋</span>Todas</button>
+    <button class="nav-btn" data-vista="buscar"><span>🔍</span>Buscar</button>
+  </nav>
+
+  <script>
+    const CLAVE_DATOS = "farmacia_baiona_datos_v1";
+    const CLAVE_RETIRADAS = "farmacia_baiona_retiradas_v1";
+    let datosActuales = null;
+    let dispensacionesRetiradas = new Set();
+    let eventoInstalacion = null;
+
+    const archivoJson = document.getElementById("archivoJson");
+    const instalarBtn = document.getElementById("instalarBtn");
+    const borrarBtn = document.getElementById("borrarBtn");
+    const datosPaciente = document.getElementById("datosPaciente");
+    const nombrePaciente = document.getElementById("nombrePaciente");
+    const fechaGeneracion = document.getElementById("fechaGeneracion");
+    const saludoPaciente = document.getElementById("saludoPaciente");
+    const inicioSinDatos = document.getElementById("inicioSinDatos");
+    const inicioConDatos = document.getElementById("inicioConDatos");
+    const resumenIcono = document.getElementById("resumenIcono");
+    const resumenTitulo = document.getElementById("resumenTitulo");
+    const resumenFecha = document.getElementById("resumenFecha");
+    const resumenMedicamentos = document.getElementById("resumenMedicamentos");
+    const resumenContador = document.getElementById("resumenContador");
+    const listadoTodas = document.getElementById("listadoTodas");
+    const busqueda = document.getElementById("busqueda");
+    const listadoBusqueda = document.getElementById("listadoBusqueda");
+    const vistaDetalle = document.getElementById("vistaDetalle");
+    const volverDetalleBtn = document.getElementById("volverDetalleBtn");
+    const detalleNombre = document.getElementById("detalleNombre");
+    const detalleNumero = document.getElementById("detalleNumero");
+    const detalleTexto = document.getElementById("detalleTexto");
+    const detalleProgreso = document.getElementById("detalleProgreso");
+    const detalleAvisoUltima = document.getElementById("detalleAvisoUltima");
+    const detalleFechas = document.getElementById("detalleFechas");
+    const botonesNav = document.querySelectorAll(".nav-btn");
+    let vistaAnteriorDetalle = "inicio";
+    let medicamentoDetalleActual = null;
+
+    function escaparHtml(texto) {
+      return String(texto)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function fechaBonita(fechaISO) {
+      const fecha = new Date(fechaISO + "T00:00:00");
+      return new Intl.DateTimeFormat("es-ES", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric"
+      }).format(fecha);
+    }
+
+    function fechaLocalISO() {
+      const hoy = new Date();
+      const y = hoy.getFullYear();
+      const m = String(hoy.getMonth() + 1).padStart(2, "0");
+      const d = String(hoy.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
+
+    function diasEntre(fechaInicioISO, fechaFinISO) {
+      const inicio = new Date(fechaInicioISO + "T00:00:00");
+      const fin = new Date(fechaFinISO + "T00:00:00");
+      return Math.round((fin - inicio) / 86400000);
+    }
+
+    function primerNombre(nombreCompleto) {
+      const limpio = String(nombreCompleto || "").trim();
+      return limpio ? limpio.split(/\s+/)[0] : "Paciente";
+    }
+
+    function normalizarMedicamento(nombre) {
+      return String(nombre || "")
+        .trim()
+        .replace(/\s+/g, " ")
+        .toLocaleUpperCase("es-ES");
+    }
+
+    function claveDispensacion(item) {
+      return JSON.stringify([
+        normalizarMedicamento(item.medicamento),
+        String(item.fecha_activacion || "").trim()
+      ]);
+    }
+
+    function cargarRetiradas() {
+      const guardadas = localStorage.getItem(CLAVE_RETIRADAS);
+      if (!guardadas) return;
+
+      try {
+        const claves = JSON.parse(guardadas);
+        if (Array.isArray(claves)) {
+          dispensacionesRetiradas = new Set(claves.filter(clave => typeof clave === "string"));
+        }
+      } catch {
+        localStorage.removeItem(CLAVE_RETIRADAS);
+        dispensacionesRetiradas = new Set();
+      }
+    }
+
+    function guardarRetiradas() {
+      localStorage.setItem(CLAVE_RETIRADAS, JSON.stringify([...dispensacionesRetiradas]));
+    }
+
+    function estaRetirada(item) {
+      return dispensacionesRetiradas.has(claveDispensacion(item));
+    }
+
+    function estadoDispensacion(item) {
+      if (estaRetirada(item)) return "retirada";
+      return item.fecha_activacion <= fechaLocalISO() ? "disponible" : "pendiente";
+    }
+
+    function marcarComoRetirada(item) {
+      dispensacionesRetiradas.add(claveDispensacion(item));
+      guardarRetiradas();
+    }
+
+    function deshacerRetirada(item) {
+      dispensacionesRetiradas.delete(claveDispensacion(item));
+      guardarRetiradas();
+    }
+
+    function validarDatos(datos) {
+      if (!datos || datos.formato !== "farmacia_baiona_dispensaciones") {
+        throw new Error("El archivo no pertenece al formato de Farmacia Baiona.");
+      }
+      if (!Array.isArray(datos.dispensaciones)) {
+        throw new Error("El archivo no contiene una lista válida de dispensaciones.");
+      }
+      for (const item of datos.dispensaciones) {
+        if (!item.fecha_activacion || !item.medicamento) {
+          throw new Error("Hay una dispensación incompleta en el archivo.");
+        }
+      }
+    }
+
+    function guardarLocalmente(datos) {
+      localStorage.setItem(CLAVE_DATOS, JSON.stringify(datos));
+    }
+
+    function cargarLocalmente() {
+      const guardado = localStorage.getItem(CLAVE_DATOS);
+      if (!guardado) return;
+      try {
+        const datos = JSON.parse(guardado);
+        validarDatos(datos);
+        datosActuales = datos;
+        mostrarDatos();
+      } catch {
+        localStorage.removeItem(CLAVE_DATOS);
+      }
+    }
+
+    function mostrarDatos() {
+      if (!datosActuales) return;
+
+      nombrePaciente.textContent = datosActuales.paciente || "Paciente";
+      const generado = datosActuales.generado_el
+        ? new Date(datosActuales.generado_el).toLocaleString("es-ES")
+        : "Fecha no disponible";
+
+      fechaGeneracion.textContent =
+        `Listado generado: ${generado} · ${datosActuales.dispensaciones.length} dispensaciones`;
+
+      saludoPaciente.textContent = `Hola, ${primerNombre(datosActuales.paciente)}.`;
+      datosPaciente.classList.remove("oculto");
+      borrarBtn.classList.remove("oculto");
+      inicioSinDatos.classList.add("oculto");
+      inicioConDatos.classList.remove("oculto");
+
+      renderizarInicio();
+      renderizarListado(datosActuales.dispensaciones, listadoTodas);
+      renderizarBusqueda();
+    }
+
+    function renderizarInicio() {
+      const hoy = fechaLocalISO();
+      const ordenadas = [...datosActuales.dispensaciones].sort((a, b) =>
+        a.fecha_activacion.localeCompare(b.fecha_activacion) ||
+        a.medicamento.localeCompare(b.medicamento, "es")
+      );
+
+      const disponibles = ordenadas.filter(item => estadoDispensacion(item) === "disponible");
+
+      if (disponibles.length > 0) {
+        resumenIcono.textContent = "✅";
+        resumenTitulo.textContent = "Hoy puedes recoger";
+        resumenFecha.textContent = fechaBonita(hoy);
+        resumenMedicamentos.innerHTML = disponibles
+          .map(item => `<div class="medicamento-destacado" data-medicamento="${encodeURIComponent(item.medicamento)}">${escaparHtml(item.medicamento)}</div>`)
+          .join("");
+        resumenContador.textContent =
+          disponibles.length === 1
+            ? "Tienes 1 medicamento disponible."
+            : `Tienes ${disponibles.length} medicamentos disponibles.`;
+        return;
+      }
+
+      const siguiente = ordenadas.find(item => estadoDispensacion(item) === "pendiente");
+
+      if (!siguiente) {
+        resumenIcono.textContent = "✅";
+        resumenTitulo.textContent = "No tienes más recetas pendientes";
+        resumenFecha.textContent = "";
+        resumenMedicamentos.innerHTML = "";
+        resumenContador.textContent = "El listado importado no contiene nuevas activaciones.";
+        return;
+      }
+
+      const mismaFecha = ordenadas.filter(item =>
+        item.fecha_activacion === siguiente.fecha_activacion &&
+        estadoDispensacion(item) === "pendiente"
+      );
+      const dias = diasEntre(hoy, siguiente.fecha_activacion);
+
+      resumenIcono.textContent = "📅";
+      resumenTitulo.textContent = "Tu próxima recogida";
+      resumenFecha.textContent = fechaBonita(siguiente.fecha_activacion);
+      resumenMedicamentos.innerHTML = mismaFecha
+        .map(item => `<div class="medicamento-destacado" data-medicamento="${encodeURIComponent(item.medicamento)}">${escaparHtml(item.medicamento)}</div>`)
+        .join("");
+
+      if (dias === 1) {
+        resumenContador.textContent = "Se activa mañana.";
+      } else {
+        resumenContador.textContent = `Faltan ${dias} días.`;
+      }
+    }
+
+    function renderizarListado(items, contenedor) {
+      const ordenados = [...items].sort((a, b) =>
+        a.fecha_activacion.localeCompare(b.fecha_activacion) ||
+        a.medicamento.localeCompare(b.medicamento, "es")
+      );
+
+      if (!ordenados.length) {
+        contenedor.innerHTML = '<div class="vacio">No hay resultados.</div>';
+        return;
+      }
+
+      const grupos = new Map();
+      for (const item of ordenados) {
+        if (!grupos.has(item.fecha_activacion)) grupos.set(item.fecha_activacion, []);
+        grupos.get(item.fecha_activacion).push(item);
+      }
+
+      const hoy = fechaLocalISO();
+      let html = "";
+
+      for (const [fecha, medicamentos] of grupos.entries()) {
+        const dias = diasEntre(hoy, fecha);
+        const estadosFecha = medicamentos.map(estadoDispensacion);
+        let etiquetaFecha = "";
+
+        if (estadosFecha.includes("disponible")) {
+          etiquetaFecha = '<span class="etiqueta">Disponible</span>';
+        } else if (estadosFecha.every(estado => estado === "retirada")) {
+          etiquetaFecha = '<span class="etiqueta etiqueta-retirada">Retirado</span>';
+        } else if (dias <= 7) {
+          etiquetaFecha = '<span class="etiqueta etiqueta-proxima">Próximamente</span>';
+        }
+
+        html += `<section class="fecha-grupo">
+          <h2 class="fecha-titulo">${escaparHtml(fechaBonita(fecha))} ${etiquetaFecha}</h2>`;
+
+        for (const item of medicamentos) {
+          const estado = estadoDispensacion(item);
+          let etiquetaEstado = '<span class="etiqueta etiqueta-proxima">Pendiente</span>';
+
+          if (estado === "disponible") {
+            etiquetaEstado = '<span class="etiqueta">Disponible</span>';
+          } else if (estado === "retirada") {
+            etiquetaEstado = '<span class="etiqueta etiqueta-retirada">Retirado</span>';
+          }
+
+          html += `<article class="medicamento ${estado === "retirada" ? "retirada" : ""}" data-medicamento="${encodeURIComponent(item.medicamento)}">
+            <strong>${escaparHtml(item.medicamento)}</strong>
+            ${etiquetaEstado}
+            ${item.ultima ? '<span class="etiqueta">Última dispensación</span>' : ""}
+          </article>`;
+        }
+
+        html += "</section>";
+      }
+
+      contenedor.innerHTML = html;
+    }
+
+    function renderizarBusqueda() {
+      if (!datosActuales) {
+        listadoBusqueda.innerHTML = '<div class="vacio">Importa un archivo para buscar medicamentos.</div>';
+        return;
+      }
+
+      const filtro = busqueda.value.trim().toLocaleUpperCase("es-ES");
+
+      if (!filtro) {
+        listadoBusqueda.innerHTML = '<div class="vacio">Escribe el nombre de un medicamento.</div>';
+        return;
+      }
+
+      const resultados = datosActuales.dispensaciones.filter(item =>
+        item.medicamento.toLocaleUpperCase("es-ES").includes(filtro)
+      );
+
+      renderizarListado(resultados, listadoBusqueda);
+    }
+
+    function abrirDetalleMedicamento(nombreMedicamento) {
+      if (!datosActuales) return;
+
+      const dispensaciones = datosActuales.dispensaciones
+        .filter(item => item.medicamento === nombreMedicamento)
+        .sort((a, b) => a.fecha_activacion.localeCompare(b.fecha_activacion));
+
+      if (!dispensaciones.length) return;
+
+      const ultimaMarcada = dispensaciones.some(item => item.ultima);
+      medicamentoDetalleActual = nombreMedicamento;
+
+      detalleNombre.textContent = nombreMedicamento;
+      detalleNumero.textContent = dispensaciones.length;
+
+      if (dispensaciones.length === 1) {
+        detalleTexto.textContent = "Hay una dispensación en este listado.";
+      } else {
+        detalleTexto.textContent = `Hay ${dispensaciones.length} dispensaciones en este listado.`;
+      }
+
+      detalleProgreso.innerHTML = dispensaciones.map(item => {
+        const estado = estadoDispensacion(item);
+        let clase = `punto-dispensacion ${estado}`;
+        if (item.ultima) clase += " ultima";
+        return `<span class="${clase}" title="${escaparHtml(fechaBonita(item.fecha_activacion))}: ${estado}"></span>`;
+      }).join("");
+
+      detalleAvisoUltima.classList.toggle("oculto", !ultimaMarcada);
+
+      detalleFechas.innerHTML = dispensaciones.map(item => {
+        const estado = estadoDispensacion(item);
+        let etiqueta = '<span class="etiqueta etiqueta-proxima">Pendiente</span>';
+        let accion = "";
+
+        if (estado === "disponible") {
+          etiqueta = '<span class="etiqueta">Disponible</span>';
+          accion = `<button class="primario accion-dispensacion"
+            data-accion-dispensacion="retirar"
+            data-fecha="${escaparHtml(item.fecha_activacion)}"
+            data-nombre="${encodeURIComponent(item.medicamento)}">✓ Marcar como retirado</button>`;
+        } else if (estado === "retirada") {
+          etiqueta = '<span class="etiqueta etiqueta-retirada">Retirado</span>';
+          accion = `<button class="accion-dispensacion accion-secundaria"
+            data-accion-dispensacion="deshacer"
+            data-fecha="${escaparHtml(item.fecha_activacion)}"
+            data-nombre="${encodeURIComponent(item.medicamento)}">↩ Marcar de nuevo como pendiente</button>`;
+        }
+
+        if (item.ultima) {
+          etiqueta += ' <span class="etiqueta" style="background:#FCE8E6;color:var(--rojo)">Última</span>';
+        }
+
+        return `<div class="fila-dispensacion ${estado === "retirada" ? "retirada" : ""}">
+          <div class="fila-dispensacion-contenido">
+            <div class="fila-fecha">${escaparHtml(fechaBonita(item.fecha_activacion))}</div>
+            <div class="fila-dispensacion-estado">${etiqueta}</div>
+          </div>
+          ${accion}
+        </div>`;
+      }).join("");
+
+      document.getElementById("vistaInicio").classList.add("oculto");
+      document.getElementById("vistaTodas").classList.add("oculto");
+      document.getElementById("vistaBuscar").classList.add("oculto");
+      vistaDetalle.classList.remove("oculto");
+
+      botonesNav.forEach(btn => btn.classList.remove("activo"));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function mostrarVista(nombre) {
+      vistaAnteriorDetalle = nombre;
+      document.getElementById("vistaInicio").classList.toggle("oculto", nombre !== "inicio");
+      document.getElementById("vistaTodas").classList.toggle("oculto", nombre !== "todas");
+      document.getElementById("vistaBuscar").classList.toggle("oculto", nombre !== "buscar");
+      vistaDetalle.classList.add("oculto");
+
+      botonesNav.forEach(btn => {
+        btn.classList.toggle("activo", btn.dataset.vista === nombre);
+      });
+
+      if (nombre === "buscar") {
+        setTimeout(() => busqueda.focus(), 50);
+      }
+    }
+
+    document.addEventListener("click", evento => {
+      const botonAccion = evento.target.closest("[data-accion-dispensacion]");
+
+      if (botonAccion) {
+        const nombre = decodeURIComponent(botonAccion.dataset.nombre);
+        const fecha = botonAccion.dataset.fecha;
+        const item = { medicamento: nombre, fecha_activacion: fecha };
+        const accion = botonAccion.dataset.accionDispensacion;
+
+        if (accion === "retirar") {
+          const confirmado = confirm(
+            `¿Confirmas que ya has recogido este medicamento?\n\n${nombre}\n${fechaBonita(fecha)}`
+          );
+          if (!confirmado) return;
+          marcarComoRetirada(item);
+        } else if (accion === "deshacer") {
+          const confirmado = confirm(
+            `¿Quieres marcar de nuevo como pendiente esta dispensación?\n\n${nombre}\n${fechaBonita(fecha)}`
+          );
+          if (!confirmado) return;
+          deshacerRetirada(item);
+        }
+
+        renderizarInicio();
+        renderizarListado(datosActuales.dispensaciones, listadoTodas);
+        renderizarBusqueda();
+        abrirDetalleMedicamento(medicamentoDetalleActual || nombre);
+        return;
+      }
+
+      const tarjeta = evento.target.closest("[data-medicamento]");
+      if (!tarjeta) return;
+
+      const nombreMedicamento = decodeURIComponent(tarjeta.dataset.medicamento);
+      const vistaVisible = !document.getElementById("vistaBuscar").classList.contains("oculto")
+        ? "buscar"
+        : (!document.getElementById("vistaTodas").classList.contains("oculto") ? "todas" : "inicio");
+
+      vistaAnteriorDetalle = vistaVisible;
+      abrirDetalleMedicamento(nombreMedicamento);
+    });
+
+    volverDetalleBtn.addEventListener("click", () => mostrarVista(vistaAnteriorDetalle));
+
+    archivoJson.addEventListener("change", async (evento) => {
+      const archivo = evento.target.files[0];
+      if (!archivo) return;
+
+      try {
+        const texto = await archivo.text();
+        const datos = JSON.parse(texto);
+        validarDatos(datos);
+        datosActuales = datos;
+        guardarLocalmente(datos);
+        busqueda.value = "";
+        mostrarDatos();
+        mostrarVista("inicio");
+        alert("Listado importado correctamente.");
+      } catch (error) {
+        alert(`No se pudo importar el archivo:\n${error.message}`);
+      } finally {
+        archivoJson.value = "";
+      }
+    });
+
+    busqueda.addEventListener("input", renderizarBusqueda);
+
+    botonesNav.forEach(btn => {
+      btn.addEventListener("click", () => mostrarVista(btn.dataset.vista));
+    });
+
+    borrarBtn.addEventListener("click", () => {
+      if (!confirm("¿Borrar del dispositivo todos los datos importados?")) return;
+
+      localStorage.removeItem(CLAVE_DATOS);
+      localStorage.removeItem(CLAVE_RETIRADAS);
+      dispensacionesRetiradas = new Set();
+      datosActuales = null;
+      busqueda.value = "";
+      datosPaciente.classList.add("oculto");
+      borrarBtn.classList.add("oculto");
+      inicioConDatos.classList.add("oculto");
+      inicioSinDatos.classList.remove("oculto");
+      listadoTodas.innerHTML = '<div class="vacio">Importa un archivo para ver las recetas.</div>';
+      listadoBusqueda.innerHTML = '<div class="vacio">Escribe el nombre de un medicamento.</div>';
+      mostrarVista("inicio");
+    });
+
+    window.addEventListener("beforeinstallprompt", (evento) => {
+      evento.preventDefault();
+      eventoInstalacion = evento;
+      instalarBtn.classList.remove("oculto");
+    });
+
+    instalarBtn.addEventListener("click", async () => {
+      if (!eventoInstalacion) return;
+      eventoInstalacion.prompt();
+      await eventoInstalacion.userChoice;
+      eventoInstalacion = null;
+      instalarBtn.classList.add("oculto");
+    });
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js"));
+    }
+
+    cargarRetiradas();
+    cargarLocalmente();
+  </script>
+</body>
+</html>
