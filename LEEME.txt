@@ -1,12 +1,18 @@
-FARMACIA BAIONA — FBP v0.5.1
+FARMACIA BAIONA — FBP v0.5.2
 
-CORRECCIÓN IPHONE
-- El QR abre FBP usando un parámetro de la dirección compatible con Safari/iPhone.
-- FBP detecta los datos al abrirse desde la cámara.
-- Se mantiene compatibilidad con los QR anteriores.
-- Se solicita confirmación antes de actualizar.
-- Se conservan las retiradas que coincidan por medicamento + fecha.
-- Se ha renovado la caché de la PWA.
+CAMBIOS ÚNICOS
+- Se retira de la portada el botón «Importar archivo JSON».
+- Se añade un engranaje de Ajustes en la cabecera.
+- Importar JSON, instalar la aplicación y borrar datos pasan a Ajustes.
+- Se añade «Acerca de FBP» y la versión visible.
+- «Hoy puedes recoger» cambia a «Disponible para recoger hoy».
+- Se conserva sin cambios la actualización mediante QR y toda la lógica anterior.
 
-IMPORTANTE
-- Después de subir esta versión a GitHub, genera un QR NUEVO con los scripts v2.1.1.
+SUBIR A GITHUB
+Sustituye estos seis archivos:
+- index.html
+- sw.js
+- manifest.webmanifest
+- icon-192.png
+- icon-512.png
+- LEEME.txt

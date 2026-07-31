@@ -45,6 +45,13 @@
       box-shadow: 0 2px 8px rgba(0,0,0,.14);
     }
 
+    .header-superior {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
     header h1 {
       margin: 0;
       font-size: 1.35rem;
@@ -54,6 +61,22 @@
       margin: 5px 0 0;
       opacity: .9;
       font-size: .92rem;
+    }
+
+    .ajustes-btn {
+      min-height: 40px;
+      width: 40px;
+      padding: 0;
+      border-radius: 50%;
+      background: transparent;
+      color: white;
+      font-size: 1.45rem;
+      line-height: 1;
+      flex: 0 0 auto;
+    }
+
+    .ajustes-btn:active {
+      background: rgba(255,255,255,.14);
     }
 
     main {
@@ -237,6 +260,73 @@
     }
 
     .oculto { display: none !important; }
+
+    .modal-fondo {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(0,0,0,.42);
+    }
+
+    .modal-ajustes {
+      width: min(100%, 430px);
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      background: var(--blanco);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 18px 50px rgba(0,0,0,.24);
+    }
+
+    .ajustes-cabecera {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .ajustes-titulo {
+      margin: 0;
+      font-size: 1.25rem;
+    }
+
+    .cerrar-ajustes-btn {
+      min-height: 38px;
+      width: 38px;
+      padding: 0;
+      border-radius: 50%;
+      background: var(--gris-retirada-claro);
+      color: var(--gris-retirada);
+      font-size: 1.2rem;
+    }
+
+    .ajustes-opciones {
+      display: grid;
+      gap: 10px;
+    }
+
+    .ajustes-separador {
+      border: 0;
+      border-top: 1px solid var(--borde);
+      margin: 18px 0;
+    }
+
+    .ajustes-info {
+      color: var(--gris);
+      font-size: .9rem;
+      line-height: 1.45;
+    }
+
+    .ajustes-version {
+      margin-top: 10px;
+      font-weight: 750;
+      color: var(--texto);
+    }
 
     .aviso {
       border-left: 4px solid var(--verde);
@@ -433,22 +523,39 @@
 </head>
 <body>
   <header>
-    <h1>Farmacia Baiona</h1>
+    <div class="header-superior">
+      <h1>Farmacia Baiona</h1>
+      <button id="abrirAjustesBtn" class="ajustes-btn" aria-label="Abrir ajustes">⚙️</button>
+    </div>
     <p>Tus recetas</p>
   </header>
 
-  <main>
-    <section class="panel">
-      <div class="acciones">
+  <input id="archivoJson" type="file" accept=".json,application/json">
+
+  <div id="modalAjustes" class="modal-fondo oculto" role="dialog" aria-modal="true" aria-labelledby="tituloAjustes">
+    <section class="modal-ajustes">
+      <div class="ajustes-cabecera">
+        <h2 id="tituloAjustes" class="ajustes-titulo">⚙️ Ajustes</h2>
+        <button id="cerrarAjustesBtn" class="cerrar-ajustes-btn" aria-label="Cerrar ajustes">✕</button>
+      </div>
+
+      <div class="ajustes-opciones">
         <label class="boton-archivo" for="archivoJson">📂 Importar archivo JSON</label>
-        <input id="archivoJson" type="file" accept=".json,application/json">
         <button id="instalarBtn" class="secundario oculto">📱 Instalar aplicación</button>
         <button id="borrarBtn" class="peligro oculto">🗑️ Borrar datos del teléfono</button>
       </div>
-      <div class="aviso">
-        Los datos se guardan únicamente en este dispositivo. Esta versión no los envía a ningún servidor.
+
+      <hr class="ajustes-separador">
+
+      <div class="ajustes-info">
+        <strong>Acerca de FBP</strong><br>
+        Los datos se guardan únicamente en este dispositivo y no se envían a ningún servidor.
+        <div class="ajustes-version">Versión 0.5.2</div>
       </div>
     </section>
+  </div>
+
+  <main>
 
     <section id="datosPaciente" class="panel oculto">
       <div id="nombrePaciente" class="paciente"></div>
@@ -529,6 +636,9 @@
     let eventoInstalacion = null;
 
     const archivoJson = document.getElementById("archivoJson");
+    const abrirAjustesBtn = document.getElementById("abrirAjustesBtn");
+    const cerrarAjustesBtn = document.getElementById("cerrarAjustesBtn");
+    const modalAjustes = document.getElementById("modalAjustes");
     const instalarBtn = document.getElementById("instalarBtn");
     const borrarBtn = document.getElementById("borrarBtn");
     const datosPaciente = document.getElementById("datosPaciente");
@@ -556,6 +666,16 @@
     const botonesNav = document.querySelectorAll(".nav-btn");
     let vistaAnteriorDetalle = "inicio";
     let medicamentoDetalleActual = null;
+
+    function abrirAjustes() {
+      modalAjustes.classList.remove("oculto");
+      document.body.style.overflow = "hidden";
+    }
+
+    function cerrarAjustes() {
+      modalAjustes.classList.add("oculto");
+      document.body.style.overflow = "";
+    }
 
     function escaparHtml(texto) {
       return String(texto)
@@ -779,7 +899,7 @@
 
       if (disponibles.length > 0) {
         resumenIcono.textContent = "✅";
-        resumenTitulo.textContent = "Hoy puedes recoger";
+        resumenTitulo.textContent = "Disponible para recoger hoy";
         resumenFecha.textContent = fechaBonita(hoy);
         resumenMedicamentos.innerHTML = disponibles
           .map(item => `<div class="medicamento-destacado" data-medicamento="${encodeURIComponent(item.medicamento)}">${escaparHtml(item.medicamento)}</div>`)
@@ -1032,6 +1152,19 @@
 
     volverDetalleBtn.addEventListener("click", () => mostrarVista(vistaAnteriorDetalle));
 
+    abrirAjustesBtn.addEventListener("click", abrirAjustes);
+    cerrarAjustesBtn.addEventListener("click", cerrarAjustes);
+
+    modalAjustes.addEventListener("click", evento => {
+      if (evento.target === modalAjustes) cerrarAjustes();
+    });
+
+    document.addEventListener("keydown", evento => {
+      if (evento.key === "Escape" && !modalAjustes.classList.contains("oculto")) {
+        cerrarAjustes();
+      }
+    });
+
     archivoJson.addEventListener("change", async (evento) => {
       const archivo = evento.target.files[0];
       if (!archivo) return;
@@ -1045,6 +1178,7 @@
         busqueda.value = "";
         mostrarDatos();
         mostrarVista("inicio");
+        cerrarAjustes();
         alert("Listado importado correctamente.");
       } catch (error) {
         alert(`No se pudo importar el archivo:\n${error.message}`);
@@ -1074,6 +1208,7 @@
       listadoTodas.innerHTML = '<div class="vacio">Importa un archivo para ver las recetas.</div>';
       listadoBusqueda.innerHTML = '<div class="vacio">Escribe el nombre de un medicamento.</div>';
       mostrarVista("inicio");
+      cerrarAjustes();
     });
 
     window.addEventListener("beforeinstallprompt", (evento) => {
@@ -1088,6 +1223,7 @@
       await eventoInstalacion.userChoice;
       eventoInstalacion = null;
       instalarBtn.classList.add("oculto");
+      cerrarAjustes();
     });
 
     if ("serviceWorker" in navigator) {
