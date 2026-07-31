@@ -1,29 +1,12 @@
-FARMACIA BAIONA — PWA v0.4.0
+FARMACIA BAIONA — FBP v0.5.1
 
-NOVEDAD ÚNICA
-- Cada dispensación puede estar Pendiente, Disponible o Retirada.
-- En la ficha del medicamento, una dispensación disponible puede marcarse como recogida.
-- Antes de marcarla se solicita confirmación.
-- Una dispensación retirada deja de aparecer en «Hoy puedes recoger».
-- Las retiradas quedan guardadas únicamente en el dispositivo.
-- Al importar otro JSON se conservan las retiradas que coincidan por medicamento + fecha de activación.
-- Puede corregirse un error con «Marcar de nuevo como pendiente».
+CORRECCIÓN IPHONE
+- El QR abre FBP usando un parámetro de la dirección compatible con Safari/iPhone.
+- FBP detecta los datos al abrirse desde la cámara.
+- Se mantiene compatibilidad con los QR anteriores.
+- Se solicita confirmación antes de actualizar.
+- Se conservan las retiradas que coincidan por medicamento + fecha.
+- Se ha renovado la caché de la PWA.
 
-SE MANTIENE SIN CAMBIOS
-- El mismo formato JSON.
-- Pantalla Inicio.
-- Listado completo.
-- Buscador.
-- Ficha del medicamento.
-- Instalación como PWA.
-- Sin servidor, cuentas ni sincronización.
-
-PRUEBA EN WINDOWS
-1. Sustituye la carpeta anterior por esta.
-2. Ejecuta dentro de la carpeta:
-   python -m http.server 8000
-3. Abre:
-   http://localhost:8000
-4. Pulsa Ctrl + F5.
-5. Abre un medicamento con una dispensación disponible.
-6. Pulsa «Ya la he recogido».
+IMPORTANTE
+- Después de subir esta versión a GitHub, genera un QR NUEVO con los scripts v2.1.1.

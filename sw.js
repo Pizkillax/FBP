@@ -1,4 +1,4 @@
-const CACHE = "farmacia-baiona-v0-4-2";
+const CACHE = "farmacia-baiona-v0-5-1";
 const ARCHIVOS = [
   "./",
   "./index.html",
@@ -22,6 +22,13 @@ self.addEventListener("activate", event => {
 });
 
 self.addEventListener("fetch", event => {
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match("./index.html"))
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then(respuesta => respuesta || fetch(event.request))
   );

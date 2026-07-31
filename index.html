@@ -665,6 +665,74 @@
       localStorage.setItem(CLAVE_DATOS, JSON.stringify(datos));
     }
 
+    async function decodificarDatosFbp(payload) {
+      if (typeof DecompressionStream === "undefined") {
+        throw new Error("Este dispositivo no permite descomprimir el código QR.");
+      }
+
+      const relleno = "=".repeat((4 - payload.length % 4) % 4);
+      const base64 = (payload + relleno).replaceAll("-", "+").replaceAll("_", "/");
+      const binario = atob(base64);
+      const bytes = Uint8Array.from(binario, caracter => caracter.charCodeAt(0));
+
+      const flujo = new Blob([bytes])
+        .stream()
+        .pipeThrough(new DecompressionStream("gzip"));
+
+      const texto = await new Response(flujo).text();
+      return JSON.parse(texto);
+    }
+
+    function obtenerPayloadFbp() {
+      const parametros = new URLSearchParams(location.search);
+      const desdeConsulta = parametros.get("fbp");
+      if (desdeConsulta) return desdeConsulta;
+
+      if (location.hash.startsWith("#fbp=")) {
+        return location.hash.slice(5);
+      }
+
+      return "";
+    }
+
+    function limpiarDatosQrDeLaDireccion() {
+      history.replaceState(null, "", location.pathname);
+    }
+
+    async function procesarImportacionDesdeQr() {
+      const payload = obtenerPayloadFbp();
+      if (!payload) return;
+
+      try {
+        const datos = await decodificarDatosFbp(payload);
+        validarDatos(datos);
+
+        const nombre = datos.paciente || "Paciente";
+        const numero = datos.dispensaciones.length;
+        const confirmado = confirm(
+          `¿Quieres actualizar las próximas dispensaciones de ${nombre}?\n\n` +
+          `${numero} dispensaciones.`
+        );
+
+        if (!confirmado) {
+          limpiarDatosQrDeLaDireccion();
+          return;
+        }
+
+        datosActuales = datos;
+        guardarLocalmente(datos);
+        busqueda.value = "";
+        mostrarDatos();
+        mostrarVista("inicio");
+        limpiarDatosQrDeLaDireccion();
+
+        alert("Dispensaciones actualizadas correctamente.");
+      } catch (error) {
+        limpiarDatosQrDeLaDireccion();
+        alert(`No se pudo leer el código QR:\n${error.message}`);
+      }
+    }
+
     function cargarLocalmente() {
       const guardado = localStorage.getItem(CLAVE_DATOS);
       if (!guardado) return;
@@ -1028,6 +1096,18 @@
 
     cargarRetiradas();
     cargarLocalmente();
+
+    window.addEventListener("pageshow", () => {
+      procesarImportacionDesdeQr();
+    });
+
+    window.addEventListener("hashchange", () => {
+      procesarImportacionDesdeQr();
+    });
+
+    setTimeout(() => {
+      procesarImportacionDesdeQr();
+    }, 250);
   </script>
 </body>
 </html>
