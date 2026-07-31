@@ -557,7 +557,7 @@
       <div class="ajustes-info">
         <strong>FBP</strong><br>
         Farmacia Baiona Pacientes
-        <div class="ajustes-version">Versión 0.5.3</div>
+        <div class="ajustes-version">Versión 0.5.4</div>
 
         <hr class="ajustes-separador">
 
@@ -919,8 +919,8 @@
           .join("");
         resumenContador.textContent =
           disponibles.length === 1
-            ? "Tienes 1 medicamento disponible."
-            : `Tienes ${disponibles.length} medicamentos disponibles.`;
+            ? "1 medicamento disponible."
+            : `${disponibles.length} medicamentos disponibles.`;
         return;
       }
 
@@ -928,7 +928,7 @@
 
       if (!siguiente) {
         resumenIcono.textContent = "✅";
-        resumenTitulo.textContent = "No tienes más recetas pendientes";
+        resumenTitulo.textContent = "No hay más recetas pendientes";
         resumenFecha.textContent = "";
         resumenMedicamentos.innerHTML = "";
         resumenContador.textContent = "El listado importado no contiene nuevas activaciones.";
@@ -942,16 +942,16 @@
       const dias = diasEntre(hoy, siguiente.fecha_activacion);
 
       resumenIcono.textContent = "📅";
-      resumenTitulo.textContent = "Tu próxima recogida";
+      resumenTitulo.textContent = "Próxima recogida";
       resumenFecha.textContent = fechaBonita(siguiente.fecha_activacion);
       resumenMedicamentos.innerHTML = mismaFecha
         .map(item => `<div class="medicamento-destacado" data-medicamento="${encodeURIComponent(item.medicamento)}">${escaparHtml(item.medicamento)}</div>`)
         .join("");
 
       if (dias === 1) {
-        resumenContador.textContent = "Se activa mañana.";
+        resumenContador.textContent = "Disponible mañana.";
       } else {
-        resumenContador.textContent = `Faltan ${dias} días.`;
+        resumenContador.textContent = `Disponible en ${dias} días.`;
       }
     }
 
