@@ -1313,7 +1313,7 @@
       const visibles = dispensacionesDetalleActual.filter(item => {
         const estado = estadoDispensacion(item);
         return pestanaDetalleActual === "activas"
-          ? estado === "disponible" || estado === "próxima"
+          ? estado === "disponible" || estado === "pendiente"
           : estado === "retirada" || estado === "caducada";
       });
 
