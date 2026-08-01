@@ -24,8 +24,8 @@
       --naranja-claro: #FFF4E5;
       --gris-retirada: #6B7280;
       --gris-retirada-claro: #EEF0F2;
-      --azul-pendiente: #3B82F6;
-      --azul-pendiente-claro: #EAF2FF;
+      --azul-próxima: #3B82F6;
+      --azul-próxima-claro: #EAF2FF;
       --rojo-caducada: #C62828;
       --rojo-caducada-claro: #FDECEC;
       --dorado-ultima: #C69214;
@@ -264,9 +264,9 @@
       color: var(--gris-retirada);
     }
 
-    .etiqueta-pendiente {
-      background: var(--azul-pendiente-claro);
-      color: var(--azul-pendiente);
+    .etiqueta-próxima {
+      background: var(--azul-próxima-claro);
+      color: var(--azul-próxima);
     }
 
     .etiqueta-caducada {
@@ -444,9 +444,9 @@
       position: relative;
     }
 
-    .punto-dispensacion.pendiente {
-      background: var(--azul-pendiente-claro);
-      border-color: var(--azul-pendiente);
+    .punto-dispensacion.próxima {
+      background: var(--azul-próxima-claro);
+      border-color: var(--azul-próxima);
     }
 
     .punto-dispensacion.disponible {
@@ -492,9 +492,9 @@
       display: inline-block;
     }
 
-    .leyenda-muestra.pendiente {
-      background: var(--azul-pendiente-claro);
-      border: 2px solid var(--azul-pendiente);
+    .leyenda-muestra.próxima {
+      background: var(--azul-próxima-claro);
+      border: 2px solid var(--azul-próxima);
     }
 
     .leyenda-muestra.disponible {
@@ -549,6 +549,13 @@
     .fila-dispensacion.retirada {
       background: #FAFBFA;
       color: var(--gris-retirada);
+    }
+
+    
+    .meta-retirada{
+      margin-top:8px;
+      color:#6B7280;
+      font-size:.82rem;
     }
 
     .fila-dispensacion.caducada {
@@ -740,13 +747,13 @@
         <div id="detalleProgreso" class="progreso-dispensaciones"></div>
 
         <div class="leyenda-estados" aria-label="Leyenda de estados">
-          <span class="leyenda-item"><span class="leyenda-muestra pendiente"></span>Pendiente</span>
+          <span class="leyenda-item"><span class="leyenda-muestra pendiente"></span>Próxima</span>
           <span class="leyenda-item"><span class="leyenda-muestra disponible"></span>Disponible</span>
           <span class="leyenda-item"><span class="leyenda-muestra retirada"></span>Retirada</span>
           <span class="leyenda-item"><span class="leyenda-muestra caducada"></span>Caducada</span>
         </div>
 
-        <div id="detalleAvisoUltima" class="ultima-discreta oculto">
+        <div id="detalleAvisoUltima" class="ultima-discreta oculto" style="display:none">
           ★ Última receta incluida en este listado. Puede ser conveniente revisar la continuidad del tratamiento antes de esa fecha.
         </div>
       </section>
@@ -1031,7 +1038,7 @@
         : "Fecha no disponible";
 
       fechaGeneracion.textContent =
-        `Listado generado: ${generado} · ${datosActuales.dispensaciones.length} dispensaciones`;
+        `Actualizado el ${generado} · ${datosActuales.dispensaciones.length} dispensaciones`;
 
       saludoPaciente.textContent = `Hola, ${primerNombre(datosActuales.paciente)}.`;
       datosPaciente.classList.remove("oculto");
@@ -1071,7 +1078,7 @@
 
       if (!siguiente) {
         resumenIcono.textContent = "✅";
-        resumenTitulo.textContent = "No hay más recetas pendientes";
+        resumenTitulo.textContent = "No hay más recetas próximas";
         resumenFecha.textContent = "";
         resumenMedicamentos.innerHTML = "";
         resumenContador.textContent = "El listado importado no contiene nuevas activaciones.";
@@ -1126,7 +1133,7 @@
         if (estadosFecha.includes("disponible")) {
           etiquetaFecha = '<span class="etiqueta">Disponible</span>';
         } else if (estadosFecha.every(estado => estado === "retirada")) {
-          etiquetaFecha = '<span class="etiqueta etiqueta-retirada">✓ Retirada</span>';
+          etiquetaFecha = '<span class="etiqueta etiqueta-retirada">✓ Retirada</span><div class="meta-retirada">El paciente la marcó como retirada.</div>';
         } else if (estadosFecha.every(estado => estado === "caducada")) {
           etiquetaFecha = '<span class="etiqueta etiqueta-caducada">Caducada</span>';
         } else if (dias <= 7 && estadosFecha.includes("pendiente")) {
@@ -1138,12 +1145,12 @@
 
         for (const item of medicamentos) {
           const estado = estadoDispensacion(item);
-          let etiquetaEstado = '<span class="etiqueta etiqueta-pendiente">Pendiente</span>';
+          let etiquetaEstado = '<span class="etiqueta etiqueta-pendiente">Próxima</span>';
 
           if (estado === "disponible") {
             etiquetaEstado = '<span class="etiqueta">Disponible</span>';
           } else if (estado === "retirada") {
-            etiquetaEstado = '<span class="etiqueta etiqueta-retirada">✓ Retirada</span>';
+            etiquetaEstado = '<span class="etiqueta etiqueta-retirada">✓ Retirada</span><div class="meta-retirada">El paciente la marcó como retirada.</div>';
           } else if (estado === "caducada") {
             etiquetaEstado = '<span class="etiqueta etiqueta-caducada">Caducada</span>';
           }
@@ -1204,7 +1211,7 @@
 
       const partesResumen = [];
       if (resumenEstados.disponible) partesResumen.push(`${resumenEstados.disponible} disponible${resumenEstados.disponible === 1 ? "" : "s"}`);
-      if (resumenEstados.pendiente) partesResumen.push(`${resumenEstados.pendiente} pendiente${resumenEstados.pendiente === 1 ? "" : "s"}`);
+      if (resumenEstados.próxima) partesResumen.push(`${resumenEstados.próxima} próxima${resumenEstados.próxima === 1 ? "" : "s"}`);
       if (resumenEstados.retirada) partesResumen.push(`${resumenEstados.retirada} retirada${resumenEstados.retirada === 1 ? "" : "s"}`);
       if (resumenEstados.caducada) partesResumen.push(`${resumenEstados.caducada} caducada${resumenEstados.caducada === 1 ? "" : "s"}`);
 
@@ -1224,7 +1231,7 @@
 
       detalleFechas.innerHTML = dispensaciones.map(item => {
         const estado = estadoDispensacion(item);
-        let etiqueta = '<span class="etiqueta etiqueta-pendiente">Pendiente</span>';
+        let etiqueta = '<span class="etiqueta etiqueta-pendiente">Próxima</span>';
         let accion = "";
 
         if (estado === "disponible") {
@@ -1234,11 +1241,11 @@
             data-fecha="${escaparHtml(item.fecha_activacion)}"
             data-nombre="${encodeURIComponent(item.medicamento)}">✓ Marcar como retirado</button>`;
         } else if (estado === "retirada") {
-          etiqueta = '<span class="etiqueta etiqueta-retirada">✓ Retirada</span>';
+          etiqueta = '<span class="etiqueta etiqueta-retirada">✓ Retirada</span><div class="meta-retirada">El paciente la marcó como retirada.</div>';
           accion = `<button class="accion-dispensacion accion-secundaria"
             data-accion-dispensacion="deshacer"
             data-fecha="${escaparHtml(item.fecha_activacion)}"
-            data-nombre="${encodeURIComponent(item.medicamento)}">↩ Marcar de nuevo como pendiente</button>`;
+            data-nombre="${encodeURIComponent(item.medicamento)}">↩ Marcar de nuevo como próxima</button>`;
         } else if (estado === "caducada") {
           etiqueta = '<span class="etiqueta etiqueta-caducada">Caducada</span>';
         }
@@ -1301,7 +1308,7 @@
           marcarComoRetirada(item);
         } else if (accion === "deshacer") {
           const confirmado = confirm(
-            `¿Quieres marcar de nuevo como pendiente esta dispensación?\n\n${nombre}\n${fechaBonita(fecha)}`
+            `¿Quieres marcar de nuevo como próxima esta dispensación?\n\n${nombre}\n${fechaBonita(fecha)}`
           );
           if (!confirmado) return;
           deshacerRetirada(item);

@@ -1,16 +1,5 @@
-FARMACIA BAIONA — FBP v0.6.1
-
-CAMBIOS
-- Cabecera inicial compacta.
-- FBP calcula el estado real de cada receta según:
-  fecha de activación, fecha de caducidad y retirada manual.
-- Estados:
-  Pendiente (azul), Disponible (verde), Retirada (gris con ✓),
-  Caducada (rojo).
-- Las recetas caducadas ya no pueden marcarse como retiradas.
-- Barra de puntos con colores de estado y leyenda.
-- La última receta del listado se marca de forma discreta con un aro dorado.
-- Se mantiene el aviso:
-  «Última receta incluida en este listado».
-- Los medicamentos repetidos no se agrupan.
-- No se ha modificado el QR ni la importación de datos.
+v0.6.2
+- Próxima
+- Actualizado el
+- Oculto aviso amarillo
+- Texto retirada
