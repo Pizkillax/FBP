@@ -257,6 +257,10 @@
       margin: 0 0 8px;
     }
 
+    .fecha-intervalo {
+      color: var(--texto);
+    }
+
     .medicamento {
       border: 1px solid var(--borde);
       background: white;
@@ -927,6 +931,24 @@
       }).format(fecha);
     }
 
+    function intervaloDisponibleBonito(fechaInicioISO, fechaFinISO) {
+      if (!fechaInicioISO) return "";
+      if (!fechaFinISO) return `Disponible desde el ${fechaCortaBonita(fechaInicioISO)}`;
+
+      const inicio = new Date(fechaInicioISO + "T00:00:00");
+      const fin = new Date(fechaFinISO + "T00:00:00");
+      const mismoAnio = inicio.getFullYear() === fin.getFullYear();
+
+      const inicioBonito = new Intl.DateTimeFormat("es-ES", {
+        day: "numeric",
+        month: "long",
+        ...(mismoAnio ? {} : { year: "numeric" })
+      }).format(inicio);
+
+      const finBonito = fechaCortaBonita(fechaFinISO);
+      return `Disponible del ${inicioBonito} al ${finBonito}`;
+    }
+
     function calendarioHoyHtml() {
       const hoy = new Date();
       const mes = new Intl.DateTimeFormat("es-ES", { month: "short" })
@@ -1238,30 +1260,24 @@
 
       const grupos = new Map();
       for (const item of ordenados) {
-        if (!grupos.has(item.fecha_activacion)) grupos.set(item.fecha_activacion, []);
-        grupos.get(item.fecha_activacion).push(item);
+        const claveGrupo = `${item.fecha_activacion}|${item.fecha_caducidad || ""}`;
+        if (!grupos.has(claveGrupo)) {
+          grupos.set(claveGrupo, {
+            fechaActivacion: item.fecha_activacion,
+            fechaCaducidad: item.fecha_caducidad,
+            medicamentos: []
+          });
+        }
+        grupos.get(claveGrupo).medicamentos.push(item);
       }
 
-      const hoy = fechaLocalISO();
       let html = "";
 
-      for (const [fecha, medicamentos] of grupos.entries()) {
-        const dias = diasEntre(hoy, fecha);
-        const estadosFecha = medicamentos.map(estadoDispensacion);
-        let etiquetaFecha = "";
-
-        if (estadosFecha.includes("disponible")) {
-          etiquetaFecha = '<span class="etiqueta">Disponible</span>';
-        } else if (estadosFecha.every(estado => estado === "retirada")) {
-          etiquetaFecha = '<span class="etiqueta etiqueta-retirada">✓ Retirada</span>';
-        } else if (estadosFecha.every(estado => estado === "caducada")) {
-          etiquetaFecha = '<span class="etiqueta etiqueta-caducada">Caducada</span>';
-        } else if (dias <= 7 && estadosFecha.includes("pendiente")) {
-          etiquetaFecha = '<span class="etiqueta etiqueta-pendiente">Próximamente</span>';
-        }
+      for (const grupo of grupos.values()) {
+        const { fechaActivacion, fechaCaducidad, medicamentos } = grupo;
 
         html += `<section class="fecha-grupo">
-          <h2 class="fecha-titulo">${escaparHtml(fechaBonita(fecha))} ${etiquetaFecha}</h2>`;
+          <h2 class="fecha-titulo fecha-intervalo">${escaparHtml(intervaloDisponibleBonito(fechaActivacion, fechaCaducidad))}</h2>`;
 
         for (const item of medicamentos) {
           const estado = estadoDispensacion(item);
