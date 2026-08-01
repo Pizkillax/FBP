@@ -24,6 +24,12 @@
       --naranja-claro: #FFF4E5;
       --gris-retirada: #6B7280;
       --gris-retirada-claro: #EEF0F2;
+      --azul-pendiente: #3B82F6;
+      --azul-pendiente-claro: #EAF2FF;
+      --rojo-caducada: #C62828;
+      --rojo-caducada-claro: #FDECEC;
+      --dorado-ultima: #C69214;
+      --dorado-ultima-claro: #FFF6D8;
     }
 
     * { box-sizing: border-box; }
@@ -166,6 +172,16 @@
       margin: 0;
     }
 
+    .panel-paciente-compacto {
+      padding-top: 14px;
+      padding-bottom: 14px;
+    }
+
+    .meta-compacta {
+      margin-top: 7px;
+      font-size: .82rem;
+    }
+
     .resumen-principal {
       text-align: center;
       padding: 22px 16px;
@@ -246,6 +262,21 @@
     .etiqueta-retirada {
       background: var(--gris-retirada-claro);
       color: var(--gris-retirada);
+    }
+
+    .etiqueta-pendiente {
+      background: var(--azul-pendiente-claro);
+      color: var(--azul-pendiente);
+    }
+
+    .etiqueta-caducada {
+      background: var(--rojo-caducada-claro);
+      color: var(--rojo-caducada);
+    }
+
+    .etiqueta-ultima {
+      background: var(--dorado-ultima-claro);
+      color: #7A5B00;
     }
 
     .medicamento.retirada {
@@ -401,11 +432,21 @@
     }
 
     .punto-dispensacion {
-      width: 18px;
-      height: 18px;
+      width: 20px;
+      height: 20px;
       border-radius: 50%;
-      background: #D6DBD6;
-      border: 2px solid #C1C8C1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .72rem;
+      font-weight: 850;
+      border: 2px solid transparent;
+      position: relative;
+    }
+
+    .punto-dispensacion.pendiente {
+      background: var(--azul-pendiente-claro);
+      border-color: var(--azul-pendiente);
     }
 
     .punto-dispensacion.disponible {
@@ -416,11 +457,77 @@
     .punto-dispensacion.retirada {
       background: var(--gris-retirada);
       border-color: var(--gris-retirada);
+      color: white;
+    }
+
+    .punto-dispensacion.caducada {
+      background: var(--rojo-caducada);
+      border-color: var(--rojo-caducada);
     }
 
     .punto-dispensacion.ultima {
-      background: var(--rojo);
-      border-color: var(--rojo);
+      box-shadow: 0 0 0 3px var(--dorado-ultima-claro), 0 0 0 5px var(--dorado-ultima);
+    }
+
+    .leyenda-estados {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px 14px;
+      margin-top: 16px;
+      color: var(--gris);
+      font-size: .80rem;
+    }
+
+    .leyenda-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .leyenda-muestra {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .leyenda-muestra.pendiente {
+      background: var(--azul-pendiente-claro);
+      border: 2px solid var(--azul-pendiente);
+    }
+
+    .leyenda-muestra.disponible {
+      background: var(--verde);
+    }
+
+    .leyenda-muestra.retirada {
+      background: var(--gris-retirada);
+      position: relative;
+    }
+
+    .leyenda-muestra.retirada::after {
+      content: "✓";
+      position: absolute;
+      inset: -4px 0 0 1px;
+      color: white;
+      font-size: .64rem;
+      font-weight: 800;
+    }
+
+    .leyenda-muestra.caducada {
+      background: var(--rojo-caducada);
+    }
+
+    .ultima-discreta {
+      margin-top: 15px;
+      border-left: 4px solid var(--dorado-ultima);
+      background: var(--dorado-ultima-claro);
+      color: #6B5300;
+      padding: 11px 12px;
+      border-radius: 10px;
+      font-size: .88rem;
+      line-height: 1.4;
     }
 
     .fila-dispensacion {
@@ -442,6 +549,11 @@
     .fila-dispensacion.retirada {
       background: #FAFBFA;
       color: var(--gris-retirada);
+    }
+
+    .fila-dispensacion.caducada {
+      background: #FFF9F9;
+      border-color: #F2C7C7;
     }
 
     .fila-dispensacion-contenido {
@@ -563,7 +675,7 @@
       <div class="ajustes-info">
         <strong>FBP</strong><br>
         Farmacia Baiona Pacientes
-        <div class="ajustes-version">Versión 0.6.0</div>
+        <div class="ajustes-version">Versión 0.6.1</div>
 
         <hr class="ajustes-separador">
 
@@ -576,20 +688,17 @@
 
   <main>
 
-    <section id="datosPaciente" class="panel oculto">
-      <div id="nombrePaciente" class="paciente"></div>
-      <div id="fechaGeneracion" class="meta"></div>
-    </section>
-
     <section id="vistaInicio">
       <section id="inicioSinDatos" class="panel">
         <div class="vacio">Importa el archivo JSON generado por el programa de la farmacia.</div>
       </section>
 
       <section id="inicioConDatos" class="oculto">
-        <section class="panel">
+        <section id="datosPaciente" class="panel panel-paciente-compacto">
           <h2 id="saludoPaciente" class="saludo"></h2>
-          <p class="subtitulo-inicio">Aquí tienes el estado de tus próximas recetas.</p>
+          <p class="subtitulo-inicio">Estado de las próximas recetas.</p>
+          <div id="fechaGeneracion" class="meta meta-compacta"></div>
+          <div id="nombrePaciente" class="oculto"></div>
         </section>
 
         <section class="panel resumen-principal">
@@ -629,8 +738,16 @@
         <div id="detalleNumero" class="detalle-numero"></div>
         <p id="detalleTexto" class="detalle-texto"></p>
         <div id="detalleProgreso" class="progreso-dispensaciones"></div>
-        <div id="detalleAvisoUltima" class="aviso-ultima oculto">
-          Esta es la última dispensación disponible. Conviene revisar la continuidad del tratamiento antes de que se agote.
+
+        <div class="leyenda-estados" aria-label="Leyenda de estados">
+          <span class="leyenda-item"><span class="leyenda-muestra pendiente"></span>Pendiente</span>
+          <span class="leyenda-item"><span class="leyenda-muestra disponible"></span>Disponible</span>
+          <span class="leyenda-item"><span class="leyenda-muestra retirada"></span>Retirada</span>
+          <span class="leyenda-item"><span class="leyenda-muestra caducada"></span>Caducada</span>
+        </div>
+
+        <div id="detalleAvisoUltima" class="ultima-discreta oculto">
+          ★ Última receta incluida en este listado. Puede ser conveniente revisar la continuidad del tratamiento antes de esa fecha.
         </div>
       </section>
 
@@ -783,7 +900,14 @@
 
     function estadoDispensacion(item) {
       if (estaRetirada(item)) return "retirada";
-      return item.fecha_activacion <= fechaLocalISO() ? "disponible" : "pendiente";
+
+      const hoy = fechaLocalISO();
+
+      if (item.fecha_caducidad && hoy > item.fecha_caducidad) {
+        return "caducada";
+      }
+
+      return item.fecha_activacion <= hoy ? "disponible" : "pendiente";
     }
 
     function marcarComoRetirada(item) {
@@ -1002,9 +1126,11 @@
         if (estadosFecha.includes("disponible")) {
           etiquetaFecha = '<span class="etiqueta">Disponible</span>';
         } else if (estadosFecha.every(estado => estado === "retirada")) {
-          etiquetaFecha = '<span class="etiqueta etiqueta-retirada">Retirado</span>';
-        } else if (dias <= 7) {
-          etiquetaFecha = '<span class="etiqueta etiqueta-proxima">Próximamente</span>';
+          etiquetaFecha = '<span class="etiqueta etiqueta-retirada">✓ Retirada</span>';
+        } else if (estadosFecha.every(estado => estado === "caducada")) {
+          etiquetaFecha = '<span class="etiqueta etiqueta-caducada">Caducada</span>';
+        } else if (dias <= 7 && estadosFecha.includes("pendiente")) {
+          etiquetaFecha = '<span class="etiqueta etiqueta-pendiente">Próximamente</span>';
         }
 
         html += `<section class="fecha-grupo">
@@ -1012,12 +1138,14 @@
 
         for (const item of medicamentos) {
           const estado = estadoDispensacion(item);
-          let etiquetaEstado = '<span class="etiqueta etiqueta-proxima">Pendiente</span>';
+          let etiquetaEstado = '<span class="etiqueta etiqueta-pendiente">Pendiente</span>';
 
           if (estado === "disponible") {
             etiquetaEstado = '<span class="etiqueta">Disponible</span>';
           } else if (estado === "retirada") {
-            etiquetaEstado = '<span class="etiqueta etiqueta-retirada">Retirado</span>';
+            etiquetaEstado = '<span class="etiqueta etiqueta-retirada">✓ Retirada</span>';
+          } else if (estado === "caducada") {
+            etiquetaEstado = '<span class="etiqueta etiqueta-caducada">Caducada</span>';
           }
 
           html += `<article class="medicamento ${estado === "retirada" ? "retirada" : ""}" data-medicamento="${encodeURIComponent(item.medicamento)}">
@@ -1066,26 +1194,37 @@
       medicamentoDetalleActual = nombreMedicamento;
 
       detalleNombre.textContent = nombreMedicamento;
+      const resumenEstados = dispensaciones.reduce((acc, item) => {
+        const estado = estadoDispensacion(item);
+        acc[estado] = (acc[estado] || 0) + 1;
+        return acc;
+      }, {});
+
       detalleNumero.textContent = dispensaciones.length;
 
-      if (dispensaciones.length === 1) {
-        detalleTexto.textContent = "Hay una dispensación en este listado.";
-      } else {
-        detalleTexto.textContent = `Hay ${dispensaciones.length} dispensaciones en este listado.`;
-      }
+      const partesResumen = [];
+      if (resumenEstados.disponible) partesResumen.push(`${resumenEstados.disponible} disponible${resumenEstados.disponible === 1 ? "" : "s"}`);
+      if (resumenEstados.pendiente) partesResumen.push(`${resumenEstados.pendiente} pendiente${resumenEstados.pendiente === 1 ? "" : "s"}`);
+      if (resumenEstados.retirada) partesResumen.push(`${resumenEstados.retirada} retirada${resumenEstados.retirada === 1 ? "" : "s"}`);
+      if (resumenEstados.caducada) partesResumen.push(`${resumenEstados.caducada} caducada${resumenEstados.caducada === 1 ? "" : "s"}`);
+
+      detalleTexto.textContent = partesResumen.length
+        ? partesResumen.join(" · ")
+        : `${dispensaciones.length} dispensaciones registradas.`;
 
       detalleProgreso.innerHTML = dispensaciones.map(item => {
         const estado = estadoDispensacion(item);
         let clase = `punto-dispensacion ${estado}`;
         if (item.ultima) clase += " ultima";
-        return `<span class="${clase}" title="${escaparHtml(fechaBonita(item.fecha_activacion))}: ${estado}"></span>`;
+        const simbolo = estado === "retirada" ? "✓" : "";
+        return `<span class="${clase}" title="${escaparHtml(fechaBonita(item.fecha_activacion))}: ${estado}">${simbolo}</span>`;
       }).join("");
 
       detalleAvisoUltima.classList.toggle("oculto", !ultimaMarcada);
 
       detalleFechas.innerHTML = dispensaciones.map(item => {
         const estado = estadoDispensacion(item);
-        let etiqueta = '<span class="etiqueta etiqueta-proxima">Pendiente</span>';
+        let etiqueta = '<span class="etiqueta etiqueta-pendiente">Pendiente</span>';
         let accion = "";
 
         if (estado === "disponible") {
@@ -1095,18 +1234,20 @@
             data-fecha="${escaparHtml(item.fecha_activacion)}"
             data-nombre="${encodeURIComponent(item.medicamento)}">✓ Marcar como retirado</button>`;
         } else if (estado === "retirada") {
-          etiqueta = '<span class="etiqueta etiqueta-retirada">Retirado</span>';
+          etiqueta = '<span class="etiqueta etiqueta-retirada">✓ Retirada</span>';
           accion = `<button class="accion-dispensacion accion-secundaria"
             data-accion-dispensacion="deshacer"
             data-fecha="${escaparHtml(item.fecha_activacion)}"
             data-nombre="${encodeURIComponent(item.medicamento)}">↩ Marcar de nuevo como pendiente</button>`;
+        } else if (estado === "caducada") {
+          etiqueta = '<span class="etiqueta etiqueta-caducada">Caducada</span>';
         }
 
         if (item.ultima) {
-          etiqueta += ' <span class="etiqueta" style="background:#FCE8E6;color:var(--rojo)">Última</span>';
+          etiqueta += ' <span class="etiqueta etiqueta-ultima">★ Última del listado</span>';
         }
 
-        return `<div class="fila-dispensacion ${estado === "retirada" ? "retirada" : ""}">
+        return `<div class="fila-dispensacion ${estado === "retirada" ? "retirada" : ""} ${estado === "caducada" ? "caducada" : ""}">
           <div class="fila-dispensacion-contenido">
             <div class="fila-fecha">${escaparHtml(fechaBonita(item.fecha_activacion))}</div>
             ${item.fecha_caducidad

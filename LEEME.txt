@@ -1,30 +1,16 @@
-FARMACIA BAIONA — FBP v0.6.0
+FARMACIA BAIONA — FBP v0.6.1
 
-NOVEDAD ÚNICA
-- Cada dispensación incorpora su fecha límite de recogida.
-- En la ficha del medicamento se muestra:
-  «Disponible hasta: [fecha]».
-- La fecha se obtiene directamente de la columna «Hasta» del PDF del SERGAS.
-- La fecha viaja tanto en el JSON como en el código QR.
-
-SE MANTIENE SIN CAMBIOS
-- Lectura de próximas dispensaciones.
-- Ticket de farmacia.
-- Impresión Posiflex.
-- Exportación JSON.
-- Actualización mediante QR.
-- Conservación de dispensaciones retiradas.
-- Inicio, Todas, Buscar y Ajustes.
-- Funcionamiento sin conexión.
-
-ARCHIVOS DEL PROGRAMA
-- ticket_farmacia_v2_2_0.py
-- ticket_farmacia_gui_v2_2_0.py
-
-ARCHIVOS PARA GITHUB
-- index.html
-- sw.js
-- manifest.webmanifest
-- icon-192.png
-- icon-512.png
-- LEEME.txt
+CAMBIOS
+- Cabecera inicial compacta.
+- FBP calcula el estado real de cada receta según:
+  fecha de activación, fecha de caducidad y retirada manual.
+- Estados:
+  Pendiente (azul), Disponible (verde), Retirada (gris con ✓),
+  Caducada (rojo).
+- Las recetas caducadas ya no pueden marcarse como retiradas.
+- Barra de puntos con colores de estado y leyenda.
+- La última receta del listado se marca de forma discreta con un aro dorado.
+- Se mantiene el aviso:
+  «Última receta incluida en este listado».
+- Los medicamentos repetidos no se agrupan.
+- No se ha modificado el QR ni la importación de datos.
