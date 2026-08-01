@@ -454,6 +454,68 @@
       margin: 0;
     }
 
+    .cima-cabecera {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .cima-titulo {
+      margin: 0;
+      font-size: 1.05rem;
+    }
+
+    .cima-estado {
+      color: var(--gris);
+      font-size: 0.92rem;
+      line-height: 1.4;
+    }
+
+    .cima-fotos {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .cima-foto {
+      border: 1px solid #e1e7e3;
+      border-radius: 14px;
+      padding: 10px;
+      background: #fff;
+      text-align: center;
+    }
+
+    .cima-foto strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--verde);
+    }
+
+    .cima-foto img {
+      display: block;
+      width: 100%;
+      max-height: 310px;
+      object-fit: contain;
+      border-radius: 10px;
+      background: #fff;
+    }
+
+    .cima-datos {
+      margin-top: 10px;
+      color: var(--gris);
+      font-size: 0.86rem;
+      line-height: 1.4;
+    }
+
+    @media (min-width: 580px) {
+      .cima-fotos {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
     .progreso-dispensaciones {
       display: flex;
       flex-wrap: wrap;
@@ -739,7 +801,7 @@
       <div class="ajustes-info">
         <strong>FBP</strong><br>
         Farmacia Baiona Pacientes
-        <div class="ajustes-version">Versión 0.6.3</div>
+        <div class="ajustes-version">Versión 1.1.0 desarrollo</div>
 
         <hr class="ajustes-separador">
 
@@ -819,6 +881,15 @@
         </div>
       </section>
 
+      <section id="cimaPanel" class="panel oculto">
+        <div class="cima-cabecera">
+          <h2 class="cima-titulo">Imágenes del medicamento</h2>
+        </div>
+        <div id="cimaEstado" class="cima-estado">Consultando CIMA…</div>
+        <div id="cimaFotos" class="cima-fotos oculto"></div>
+        <div id="cimaDatos" class="cima-datos oculto"></div>
+      </section>
+
       <section class="panel">
         <h2 class="fecha-titulo">Dispensaciones</h2>
         <div class="pestanas-dispensaciones" role="tablist" aria-label="Tipo de dispensaciones">
@@ -872,6 +943,10 @@
     const detalleTexto = document.getElementById("detalleTexto");
     const detalleProgreso = document.getElementById("detalleProgreso");
     const detalleAvisoUltima = document.getElementById("detalleAvisoUltima");
+    const cimaPanel = document.getElementById("cimaPanel");
+    const cimaEstado = document.getElementById("cimaEstado");
+    const cimaFotos = document.getElementById("cimaFotos");
+    const cimaDatos = document.getElementById("cimaDatos");
     const pestanaActivas = document.getElementById("pestanaActivas");
     const pestanaHistorico = document.getElementById("pestanaHistorico");
     const detalleFechas = document.getElementById("detalleFechas");
@@ -881,6 +956,11 @@
     let dispensacionesDetalleActual = [];
     let pestanaDetalleActual = "activas";
     let pestanaTodasActual = "activas";
+    let consultaCimaActual = 0;
+
+    const CIMA_API_MEDICAMENTOS = "https://cima.aemps.es/cima/rest/medicamentos";
+    const CIMA_API_MEDICAMENTO = "https://cima.aemps.es/cima/rest/medicamento";
+    const CIMA_BASE = "https://cima.aemps.es/";
 
     function abrirAjustes() {
       modalAjustes.classList.remove("oculto");
@@ -1416,6 +1496,174 @@
       }).join("");
     }
 
+    function textoCimaNormalizado(texto) {
+      return String(texto || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase()
+        .replace(/,/g, ".")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function convertirGramosAMiligramos(texto) {
+      return texto.replace(/(^|\s)(\d+(?:[.,]\d+)?)\s*G\b/gi, (_todo, prefijo, numero) => {
+        const valor = Number(numero.replace(",", ".")) * 1000;
+        return `${prefijo}${Number.isInteger(valor) ? valor : valor.toString()} MG`;
+      });
+    }
+
+    function normalizarNombreParaCima(nombre) {
+      let texto = textoCimaNormalizado(nombre);
+      texto = convertirGramosAMiligramos(texto);
+      texto = texto.replace(/\bEFG\b/g, " ");
+
+      const formas = [
+        "COMPRIMIDOS?", "CAPSULAS?", "SOBRES?", "PARCHES?", "VIALES?",
+        "AMPOLLAS?", "SUPOSITORIOS?", "GRAGEAS?", "PULSACIONES?",
+        "APLICACIONES?", "UNIDADES?", "DOSIS", "BOLSAS?", "GOTEROS?"
+      ].join("|");
+
+      texto = texto.replace(
+        new RegExp(`\\b\\d+\\s+(?=(?:${formas})\\b)`, "g"),
+        ""
+      );
+
+      return texto.replace(/\s+/g, " ").trim();
+    }
+
+    function extraerListaMedicamentosCima(datos) {
+      if (Array.isArray(datos)) return datos.filter(item => item && typeof item === "object");
+      if (!datos || typeof datos !== "object") return [];
+
+      for (const clave of ["resultados", "medicamentos", "items", "lista"]) {
+        if (Array.isArray(datos[clave])) return datos[clave].filter(item => item && typeof item === "object");
+      }
+
+      return datos.nregistro || datos.nombre ? [datos] : [];
+    }
+
+    function obtenerPrefijoCima(nombre) {
+      const primera = textoCimaNormalizado(nombre).match(/[A-Z]+/);
+      if (!primera) return "";
+      return primera[0].slice(0, Math.min(4, primera[0].length));
+    }
+
+    function extraerDosisCompuestaCima(texto) {
+      const normalizado = textoCimaNormalizado(texto);
+      const coincidencia = normalizado.match(/(?:^|\D)(\d+(?:\.\d+)?)\s*(?:MG|G|MCG|UG|µG)?\s*\/\s*(\d+(?:\.\d+)?)\s*(?:MG|G|MCG|UG|µG)?(?:\D|$)/);
+      return coincidencia ? `${coincidencia[1]}/${coincidencia[2]}` : null;
+    }
+
+    function filtrarCandidatosCima(candidatos, consulta) {
+      const consultaNormalizada = textoCimaNormalizado(consulta);
+      const palabrasConsulta = consultaNormalizada.match(/[A-Z]+/g) || [];
+      const dosisCompuesta = extraerDosisCompuestaCima(consultaNormalizada);
+      const numerosConsulta = consultaNormalizada.match(/\d+(?:\.\d+)?/g) || [];
+
+      return candidatos.filter(candidato => {
+        const nombre = textoCimaNormalizado(candidato.nombre || "");
+        const laboratorio = textoCimaNormalizado(candidato.labtitular || "");
+        const texto = `${nombre} ${laboratorio}`;
+        const palabrasCandidato = texto.match(/[A-Z]+/g) || [];
+
+        const coincidenPalabras = palabrasConsulta
+          .filter(palabra => palabra.length >= 3)
+          .every(palabra => palabrasCandidato.some(candidata => candidata.startsWith(palabra)));
+
+        if (!coincidenPalabras) return false;
+        if (dosisCompuesta) return extraerDosisCompuestaCima(nombre) === dosisCompuesta;
+
+        const numerosCandidato = nombre.match(/\d+(?:\.\d+)?/g) || [];
+        return numerosConsulta.every(numero => numerosCandidato.includes(numero));
+      });
+    }
+
+    async function pedirJsonCima(url, parametros) {
+      const destino = new URL(url);
+      Object.entries(parametros).forEach(([clave, valor]) => destino.searchParams.set(clave, valor));
+      const respuesta = await fetch(destino.toString(), { headers: { Accept: "application/json" } });
+      if (!respuesta.ok) throw new Error(`CIMA respondió con error ${respuesta.status}`);
+      return respuesta.json();
+    }
+
+    function urlCimaCompleta(url) {
+      if (!url) return "";
+      return new URL(url, CIMA_BASE).toString();
+    }
+
+    function mostrarResultadoCima(datos, nombreConsultado, idConsulta) {
+      if (idConsulta !== consultaCimaActual || medicamentoDetalleActual !== nombreConsultado || !datos) return;
+
+      const fotos = Array.isArray(datos.fotos)
+        ? datos.fotos.filter(foto => foto && foto.url)
+        : datos.fotos && datos.fotos.url ? [datos.fotos] : [];
+      const envase = fotos.find(foto => String(foto.tipo || "").toLowerCase() === "materialas");
+      const forma = fotos.find(foto => String(foto.tipo || "").toLowerCase() === "formafarmac");
+      const tarjetas = [];
+
+      if (envase) tarjetas.push(`<div class="cima-foto"><strong>Envase</strong><img src="${escaparHtml(urlCimaCompleta(envase.url))}" alt="Fotografía del envase" loading="lazy"></div>`);
+      if (forma) tarjetas.push(`<div class="cima-foto"><strong>Forma farmacéutica</strong><img src="${escaparHtml(urlCimaCompleta(forma.url))}" alt="Fotografía de la forma farmacéutica" loading="lazy"></div>`);
+
+      cimaFotos.innerHTML = tarjetas.join("");
+      cimaFotos.classList.toggle("oculto", tarjetas.length === 0);
+      cimaEstado.textContent = tarjetas.length
+        ? "Imágenes oficiales facilitadas por CIMA."
+        : "CIMA ha identificado el medicamento, pero no dispone de fotografías.";
+
+      cimaDatos.textContent = [datos.nombre || "", datos.labtitular || ""].filter(Boolean).join(" · ");
+      cimaDatos.classList.toggle("oculto", !cimaDatos.textContent);
+      cimaPanel.classList.remove("oculto");
+    }
+
+    async function cargarInformacionCima(nombreMedicamento) {
+      const idConsulta = ++consultaCimaActual;
+      cimaPanel.classList.remove("oculto");
+      cimaEstado.textContent = "Consultando CIMA…";
+      cimaFotos.innerHTML = "";
+      cimaFotos.classList.add("oculto");
+      cimaDatos.textContent = "";
+      cimaDatos.classList.add("oculto");
+
+      const consulta = normalizarNombreParaCima(nombreMedicamento);
+
+      try {
+        let datosLista = await pedirJsonCima(CIMA_API_MEDICAMENTOS, { nombre: consulta, comerc: "1", autorizados: "1" });
+        let resultados = extraerListaMedicamentosCima(datosLista);
+
+        if (!resultados.length) {
+          const prefijo = obtenerPrefijoCima(consulta);
+          if (prefijo) {
+            datosLista = await pedirJsonCima(CIMA_API_MEDICAMENTOS, { nombre: prefijo, comerc: "1", autorizados: "1" });
+            resultados = filtrarCandidatosCima(extraerListaMedicamentosCima(datosLista), consulta);
+          }
+        }
+
+        if (idConsulta !== consultaCimaActual || medicamentoDetalleActual !== nombreMedicamento) return;
+
+        if (resultados.length !== 1) {
+          cimaEstado.textContent = resultados.length
+            ? "CIMA ha encontrado varias coincidencias y no se mostrará una imagen dudosa."
+            : "No se ha encontrado una coincidencia fiable en CIMA.";
+          return;
+        }
+
+        const nregistro = resultados[0].nregistro;
+        if (!nregistro) {
+          cimaEstado.textContent = "CIMA no ha devuelto el número de registro del medicamento.";
+          return;
+        }
+
+        const detalle = await pedirJsonCima(CIMA_API_MEDICAMENTO, { nregistro });
+        mostrarResultadoCima(Array.isArray(detalle) ? detalle[0] : detalle, nombreMedicamento, idConsulta);
+      } catch (_error) {
+        if (idConsulta !== consultaCimaActual || medicamentoDetalleActual !== nombreMedicamento) return;
+        cimaEstado.textContent = navigator.onLine
+          ? "No se ha podido consultar CIMA en este momento."
+          : "Sin conexión: las imágenes de CIMA no están disponibles.";
+      }
+    }
+
     function abrirDetalleMedicamento(nombreMedicamento, conservarPestana = false) {
       if (!datosActuales) return;
 
@@ -1462,6 +1710,7 @@
 
       detalleAvisoUltima.classList.toggle("oculto", !ultimaMarcada);
       renderizarDispensacionesDetalle();
+      cargarInformacionCima(nombreMedicamento);
 
       document.getElementById("vistaInicio").classList.add("oculto");
       document.getElementById("vistaTodas").classList.add("oculto");
