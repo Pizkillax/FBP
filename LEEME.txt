@@ -1,15 +1,27 @@
-FARMACIA BAIONA — FBP v0.5.2
+FARMACIA BAIONA — FBP v0.6.0
 
-CAMBIOS ÚNICOS
-- Se retira de la portada el botón «Importar archivo JSON».
-- Se añade un engranaje de Ajustes en la cabecera.
-- Importar JSON, instalar la aplicación y borrar datos pasan a Ajustes.
-- Se añade «Acerca de FBP» y la versión visible.
-- «Hoy puedes recoger» cambia a «Disponible para recoger hoy».
-- Se conserva sin cambios la actualización mediante QR y toda la lógica anterior.
+NOVEDAD ÚNICA
+- Cada dispensación incorpora su fecha límite de recogida.
+- En la ficha del medicamento se muestra:
+  «Disponible hasta: [fecha]».
+- La fecha se obtiene directamente de la columna «Hasta» del PDF del SERGAS.
+- La fecha viaja tanto en el JSON como en el código QR.
 
-SUBIR A GITHUB
-Sustituye estos seis archivos:
+SE MANTIENE SIN CAMBIOS
+- Lectura de próximas dispensaciones.
+- Ticket de farmacia.
+- Impresión Posiflex.
+- Exportación JSON.
+- Actualización mediante QR.
+- Conservación de dispensaciones retiradas.
+- Inicio, Todas, Buscar y Ajustes.
+- Funcionamiento sin conexión.
+
+ARCHIVOS DEL PROGRAMA
+- ticket_farmacia_v2_2_0.py
+- ticket_farmacia_gui_v2_2_0.py
+
+ARCHIVOS PARA GITHUB
 - index.html
 - sw.js
 - manifest.webmanifest

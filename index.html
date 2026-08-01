@@ -453,6 +453,12 @@
       margin-top: 7px;
     }
 
+    .fila-caducidad {
+      margin-top: 6px;
+      color: var(--gris);
+      font-size: .86rem;
+    }
+
     .accion-dispensacion {
       min-height: 34px;
       padding: 6px 10px;
@@ -557,7 +563,7 @@
       <div class="ajustes-info">
         <strong>FBP</strong><br>
         Farmacia Baiona Pacientes
-        <div class="ajustes-version">Versión 0.5.4</div>
+        <div class="ajustes-version">Versión 0.6.0</div>
 
         <hr class="ajustes-separador">
 
@@ -709,6 +715,16 @@
       }).format(fecha);
     }
 
+    function fechaCortaBonita(fechaISO) {
+      if (!fechaISO) return "";
+      const fecha = new Date(fechaISO + "T00:00:00");
+      return new Intl.DateTimeFormat("es-ES", {
+        day: "numeric",
+        month: "long",
+        year: "numeric"
+      }).format(fecha);
+    }
+
     function fechaLocalISO() {
       const hoy = new Date();
       const y = hoy.getFullYear();
@@ -790,6 +806,9 @@
       for (const item of datos.dispensaciones) {
         if (!item.fecha_activacion || !item.medicamento) {
           throw new Error("Hay una dispensación incompleta en el archivo.");
+        }
+        if (item.fecha_caducidad && item.fecha_caducidad < item.fecha_activacion) {
+          throw new Error("Hay una fecha de caducidad anterior a la fecha de activación.");
         }
       }
     }
@@ -1090,6 +1109,9 @@
         return `<div class="fila-dispensacion ${estado === "retirada" ? "retirada" : ""}">
           <div class="fila-dispensacion-contenido">
             <div class="fila-fecha">${escaparHtml(fechaBonita(item.fecha_activacion))}</div>
+            ${item.fecha_caducidad
+              ? `<div class="fila-caducidad">Disponible hasta: ${escaparHtml(fechaCortaBonita(item.fecha_caducidad))}</div>`
+              : ""}
             <div class="fila-dispensacion-estado">${etiqueta}</div>
           </div>
           ${accion}
