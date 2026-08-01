@@ -454,18 +454,51 @@
       margin: 0;
     }
 
-    .cima-cabecera {
-      margin-bottom: 8px;
+    .cima-panel {
+      padding: 0;
+      overflow: hidden;
     }
 
-    .cima-titulo {
-      margin: 0;
+    .cima-desplegar {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px 20px;
+      border: 0;
+      background: #fff;
+      color: var(--texto);
+      font: inherit;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .cima-desplegar-texto {
       font-size: 1.05rem;
+      font-weight: 850;
+    }
+
+    .cima-desplegar-icono {
+      color: var(--verde);
+      font-size: 1.35rem;
+      font-weight: 800;
+      transition: transform 0.2s ease;
+    }
+
+    .cima-desplegar[aria-expanded="true"] .cima-desplegar-icono {
+      transform: rotate(90deg);
+    }
+
+    .cima-contenido {
+      padding: 0 20px 18px;
+      border-top: 1px solid #edf1ee;
     }
 
     .cima-estado {
+      margin: 14px 0 0;
       color: var(--gris);
-      font-size: 0.92rem;
+      font-size: 0.9rem;
       line-height: 1.4;
     }
 
@@ -474,26 +507,25 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 8px;
       margin-top: 14px;
-      padding: 4px;
-      border-radius: 14px;
-      background: #f0f5f1;
     }
 
     .cima-selector button {
-      border: 0;
-      border-radius: 11px;
+      min-height: 48px;
+      border: 1px solid #dce6de;
+      border-radius: 13px;
       padding: 10px 8px;
-      background: transparent;
-      color: var(--gris);
+      background: #f7faf8;
+      color: var(--verde);
       font: inherit;
-      font-weight: 750;
+      font-weight: 800;
       cursor: pointer;
     }
 
     .cima-selector button.activo {
-      background: #fff;
-      color: var(--verde);
-      box-shadow: 0 2px 8px rgba(30, 70, 40, 0.12);
+      background: var(--verde);
+      color: #fff;
+      border-color: var(--verde);
+      box-shadow: 0 3px 10px rgba(30, 110, 45, 0.18);
     }
 
     .cima-fotos {
@@ -510,31 +542,35 @@
 
     .cima-foto-titulo {
       display: block;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       color: var(--verde);
       font-weight: 800;
     }
 
     .cima-foto img {
       display: block;
-      width: 100%;
-      height: 250px;
+      width: auto;
+      max-width: min(100%, 360px);
+      height: auto;
+      max-height: 210px;
+      margin: 0 auto;
       object-fit: contain;
-      border-radius: 12px;
+      border-radius: 10px;
       background: #fff;
       cursor: zoom-in;
+      image-rendering: auto;
     }
 
     .cima-ampliar {
-      margin: 9px 0 0;
+      margin: 8px 0 0;
       color: var(--gris);
-      font-size: 0.78rem;
+      font-size: 0.76rem;
     }
 
     .cima-datos {
       margin-top: 10px;
       color: var(--gris);
-      font-size: 0.86rem;
+      font-size: 0.82rem;
       line-height: 1.4;
     }
 
@@ -555,9 +591,9 @@
 
     .cima-visor-contenido {
       position: relative;
-      width: min(100%, 780px);
+      width: min(100%, 900px);
       max-height: 92vh;
-      padding: 16px;
+      padding: 12px;
       border-radius: 18px;
       background: #fff;
       box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
@@ -566,7 +602,7 @@
     .cima-visor img {
       display: block;
       width: 100%;
-      max-height: calc(92vh - 32px);
+      max-height: calc(92vh - 24px);
       object-fit: contain;
       background: #fff;
       border-radius: 12px;
@@ -586,12 +622,6 @@
       font-weight: 800;
       cursor: pointer;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-    }
-
-    @media (min-width: 580px) {
-      .cima-foto img {
-        height: 320px;
-      }
     }
 
     .progreso-dispensaciones {
@@ -959,17 +989,20 @@
         </div>
       </section>
 
-      <section id="cimaPanel" class="panel oculto">
-        <div class="cima-cabecera">
-          <h2 class="cima-titulo">Aspecto del medicamento</h2>
+      <section id="cimaPanel" class="panel cima-panel">
+        <button id="cimaDesplegar" class="cima-desplegar" type="button" aria-expanded="false" aria-controls="cimaContenido">
+          <span class="cima-desplegar-texto">Aspecto del medicamento</span>
+          <span class="cima-desplegar-icono" aria-hidden="true">›</span>
+        </button>
+        <div id="cimaContenido" class="cima-contenido oculto">
+          <div id="cimaEstado" class="cima-estado">Elige qué imagen quieres consultar.</div>
+          <div id="cimaSelector" class="cima-selector" role="tablist" aria-label="Imagen del medicamento">
+            <button id="cimaBotonEnvase" type="button" role="tab" aria-selected="false">Ver envase</button>
+            <button id="cimaBotonForma" type="button" role="tab" aria-selected="false">Ver comprimido / forma</button>
+          </div>
+          <div id="cimaFotos" class="cima-fotos oculto"></div>
+          <div id="cimaDatos" class="cima-datos oculto"></div>
         </div>
-        <div id="cimaEstado" class="cima-estado">Consultando CIMA…</div>
-        <div id="cimaSelector" class="cima-selector oculto" role="tablist" aria-label="Imagen del medicamento">
-          <button id="cimaBotonEnvase" type="button" role="tab" aria-selected="true">Envase</button>
-          <button id="cimaBotonForma" type="button" role="tab" aria-selected="false">Comprimido / forma</button>
-        </div>
-        <div id="cimaFotos" class="cima-fotos oculto"></div>
-        <div id="cimaDatos" class="cima-datos oculto"></div>
       </section>
 
       <section class="panel">
@@ -1033,6 +1066,8 @@
     const detalleProgreso = document.getElementById("detalleProgreso");
     const detalleAvisoUltima = document.getElementById("detalleAvisoUltima");
     const cimaPanel = document.getElementById("cimaPanel");
+    const cimaDesplegar = document.getElementById("cimaDesplegar");
+    const cimaContenido = document.getElementById("cimaContenido");
     const cimaEstado = document.getElementById("cimaEstado");
     const cimaSelector = document.getElementById("cimaSelector");
     const cimaBotonEnvase = document.getElementById("cimaBotonEnvase");
@@ -1052,6 +1087,10 @@
     let pestanaDetalleActual = "activas";
     let pestanaTodasActual = "activas";
     let consultaCimaActual = 0;
+    let nombreCimaPendiente = "";
+    let resultadoCimaActual = null;
+    let promesaCimaActual = null;
+    let tipoCimaSolicitado = null;
 
     const CIMA_API_MEDICAMENTOS = "https://cima.aemps.es/cima/rest/medicamentos";
     const CIMA_API_MEDICAMENTO = "https://cima.aemps.es/cima/rest/medicamento";
@@ -1706,10 +1745,7 @@
       document.body.style.overflow = "";
     }
 
-    function mostrarFotoCima(tipo) {
-      const tarjetas = Array.from(cimaFotos.querySelectorAll(".cima-foto"));
-      tarjetas.forEach(tarjeta => tarjeta.classList.toggle("oculto", tarjeta.dataset.tipo !== tipo));
-
+    function activarBotonCima(tipo) {
       const envaseActivo = tipo === "envase";
       cimaBotonEnvase.classList.toggle("activo", envaseActivo);
       cimaBotonForma.classList.toggle("activo", !envaseActivo);
@@ -1723,101 +1759,146 @@
       const alta = urlCimaAltaResolucion(foto.url);
       return `<div class="cima-foto" data-tipo="${tipo}">
         <span class="cima-foto-titulo">${escaparHtml(titulo)}</span>
-        <img src="${escaparHtml(alta)}" data-fallback="${escaparHtml(miniatura)}" alt="${escaparHtml(alt)}" loading="lazy">
+        <img src="${escaparHtml(alta)}" data-fallback="${escaparHtml(miniatura)}" alt="${escaparHtml(alt)}" decoding="async">
         <p class="cima-ampliar">Toca la imagen para ampliarla</p>
       </div>`;
     }
 
-    function mostrarResultadoCima(datos, nombreConsultado, idConsulta) {
-      if (idConsulta !== consultaCimaActual || medicamentoDetalleActual !== nombreConsultado || !datos) return;
-
-      const fotos = Array.isArray(datos.fotos)
+    function obtenerFotoCima(datos, tipo) {
+      const fotos = Array.isArray(datos?.fotos)
         ? datos.fotos.filter(foto => foto && foto.url)
-        : datos.fotos && datos.fotos.url ? [datos.fotos] : [];
-      const envase = fotos.find(foto => String(foto.tipo || "").toLowerCase() === "materialas");
-      const forma = fotos.find(foto => String(foto.tipo || "").toLowerCase() === "formafarmac");
-      const tarjetas = [
-        crearTarjetaFotoCima(envase, "envase", "Envase", "Fotografía del envase"),
-        crearTarjetaFotoCima(forma, "forma", "Comprimido / forma farmacéutica", "Fotografía de la forma farmacéutica")
-      ].filter(Boolean);
+        : datos?.fotos?.url ? [datos.fotos] : [];
+      const codigoTipo = tipo === "envase" ? "materialas" : "formafarmac";
+      return fotos.find(foto => String(foto.tipo || "").toLowerCase() === codigoTipo) || null;
+    }
 
-      cimaFotos.innerHTML = tarjetas.join("");
-      cimaFotos.classList.toggle("oculto", tarjetas.length === 0);
-      cimaSelector.classList.toggle("oculto", tarjetas.length < 2);
-      cimaBotonEnvase.classList.toggle("oculto", !envase);
-      cimaBotonForma.classList.toggle("oculto", !forma);
+    function mostrarFotoCima(tipo) {
+      tipoCimaSolicitado = tipo;
+      activarBotonCima(tipo);
 
-      cimaFotos.querySelectorAll("img").forEach(imagen => {
+      if (!resultadoCimaActual) {
+        cimaEstado.textContent = "Consultando CIMA…";
+        cimaFotos.innerHTML = "";
+        cimaFotos.classList.add("oculto");
+        consultarCimaSiHaceFalta();
+        return;
+      }
+
+      const foto = obtenerFotoCima(resultadoCimaActual, tipo);
+      if (!foto) {
+        cimaFotos.innerHTML = "";
+        cimaFotos.classList.add("oculto");
+        cimaEstado.textContent = tipo === "envase"
+          ? "CIMA no dispone de fotografía del envase para este medicamento."
+          : "CIMA no dispone de fotografía de la forma farmacéutica para este medicamento.";
+        return;
+      }
+
+      const titulo = tipo === "envase" ? "Envase" : "Comprimido / forma farmacéutica";
+      const alt = tipo === "envase" ? "Fotografía del envase" : "Fotografía de la forma farmacéutica";
+      cimaFotos.innerHTML = crearTarjetaFotoCima(foto, tipo, titulo, alt);
+      cimaFotos.classList.remove("oculto");
+      cimaEstado.textContent = "Imagen oficial facilitada por CIMA.";
+
+      const imagen = cimaFotos.querySelector("img");
+      if (imagen) {
         imagen.addEventListener("error", () => {
           const fallback = imagen.dataset.fallback;
           if (fallback && imagen.src !== fallback) imagen.src = fallback;
         }, { once: true });
         imagen.addEventListener("click", () => abrirVisorCima(imagen.currentSrc || imagen.src, imagen.alt));
-      });
-
-      if (envase) mostrarFotoCima("envase");
-      else if (forma) mostrarFotoCima("forma");
-
-      cimaEstado.textContent = tarjetas.length
-        ? "Imágenes oficiales facilitadas por CIMA."
-        : "CIMA ha identificado el medicamento, pero no dispone de fotografías.";
-
-      cimaDatos.textContent = [datos.nombre || "", datos.labtitular || ""].filter(Boolean).join(" · ");
-      cimaDatos.classList.toggle("oculto", !cimaDatos.textContent);
-      cimaPanel.classList.remove("oculto");
-    }
-
-    async function cargarInformacionCima(nombreMedicamento) {
-      const idConsulta = ++consultaCimaActual;
-      cimaPanel.classList.remove("oculto");
-      cimaEstado.textContent = "Consultando CIMA…";
-      cimaFotos.innerHTML = "";
-      cimaFotos.classList.add("oculto");
-      cimaSelector.classList.add("oculto");
-      cimaBotonEnvase.classList.remove("activo", "oculto");
-      cimaBotonForma.classList.remove("activo", "oculto");
-      cimaDatos.textContent = "";
-      cimaDatos.classList.add("oculto");
-
-      const consulta = normalizarNombreParaCima(nombreMedicamento);
-
-      try {
-        let datosLista = await pedirJsonCima(CIMA_API_MEDICAMENTOS, { nombre: consulta, comerc: "1", autorizados: "1" });
-        let resultados = extraerListaMedicamentosCima(datosLista);
-
-        if (!resultados.length) {
-          const prefijo = obtenerPrefijoCima(consulta);
-          if (prefijo) {
-            datosLista = await pedirJsonCima(CIMA_API_MEDICAMENTOS, { nombre: prefijo, comerc: "1", autorizados: "1" });
-            resultados = filtrarCandidatosCima(extraerListaMedicamentosCima(datosLista), consulta);
-          }
-        }
-
-        if (idConsulta !== consultaCimaActual || medicamentoDetalleActual !== nombreMedicamento) return;
-
-        if (resultados.length !== 1) {
-          cimaEstado.textContent = resultados.length
-            ? "CIMA ha encontrado varias coincidencias y no se mostrará una imagen dudosa."
-            : "No se ha encontrado una coincidencia fiable en CIMA.";
-          return;
-        }
-
-        const nregistro = resultados[0].nregistro;
-        if (!nregistro) {
-          cimaEstado.textContent = "CIMA no ha devuelto el número de registro del medicamento.";
-          return;
-        }
-
-        const detalle = await pedirJsonCima(CIMA_API_MEDICAMENTO, { nregistro });
-        mostrarResultadoCima(Array.isArray(detalle) ? detalle[0] : detalle, nombreMedicamento, idConsulta);
-      } catch (_error) {
-        if (idConsulta !== consultaCimaActual || medicamentoDetalleActual !== nombreMedicamento) return;
-        cimaEstado.textContent = navigator.onLine
-          ? "No se ha podido consultar CIMA en este momento."
-          : "Sin conexión: las imágenes de CIMA no están disponibles.";
       }
     }
 
+    function mostrarResultadoCima(datos, nombreConsultado, idConsulta) {
+      if (idConsulta !== consultaCimaActual || medicamentoDetalleActual !== nombreConsultado || !datos) return;
+
+      resultadoCimaActual = datos;
+      promesaCimaActual = null;
+      cimaDatos.textContent = [datos.nombre || "", datos.labtitular || ""].filter(Boolean).join(" · ");
+      cimaDatos.classList.toggle("oculto", !cimaDatos.textContent);
+
+      if (tipoCimaSolicitado) mostrarFotoCima(tipoCimaSolicitado);
+      else cimaEstado.textContent = "Elige qué imagen quieres consultar.";
+    }
+
+    async function consultarCimaSiHaceFalta() {
+      if (resultadoCimaActual || promesaCimaActual || !nombreCimaPendiente) return promesaCimaActual;
+
+      const nombreMedicamento = nombreCimaPendiente;
+      const idConsulta = consultaCimaActual;
+      const consulta = normalizarNombreParaCima(nombreMedicamento);
+
+      promesaCimaActual = (async () => {
+        try {
+          let datosLista = await pedirJsonCima(CIMA_API_MEDICAMENTOS, { nombre: consulta, comerc: "1", autorizados: "1" });
+          let resultados = extraerListaMedicamentosCima(datosLista);
+
+          if (!resultados.length) {
+            const prefijo = obtenerPrefijoCima(consulta);
+            if (prefijo) {
+              datosLista = await pedirJsonCima(CIMA_API_MEDICAMENTOS, { nombre: prefijo, comerc: "1", autorizados: "1" });
+              resultados = filtrarCandidatosCima(extraerListaMedicamentosCima(datosLista), consulta);
+            }
+          }
+
+          if (idConsulta !== consultaCimaActual || medicamentoDetalleActual !== nombreMedicamento) return;
+
+          if (resultados.length !== 1) {
+            promesaCimaActual = null;
+            cimaEstado.textContent = resultados.length
+              ? "CIMA ha encontrado varias coincidencias y no se mostrará una imagen dudosa."
+              : "No se ha encontrado una coincidencia fiable en CIMA.";
+            return;
+          }
+
+          const nregistro = resultados[0].nregistro;
+          if (!nregistro) {
+            promesaCimaActual = null;
+            cimaEstado.textContent = "CIMA no ha devuelto el número de registro del medicamento.";
+            return;
+          }
+
+          const detalle = await pedirJsonCima(CIMA_API_MEDICAMENTO, { nregistro });
+          mostrarResultadoCima(Array.isArray(detalle) ? detalle[0] : detalle, nombreMedicamento, idConsulta);
+        } catch (_error) {
+          if (idConsulta !== consultaCimaActual || medicamentoDetalleActual !== nombreMedicamento) return;
+          promesaCimaActual = null;
+          cimaEstado.textContent = navigator.onLine
+            ? "No se ha podido consultar CIMA en este momento."
+            : "Sin conexión: las imágenes de CIMA no están disponibles.";
+        }
+      })();
+
+      return promesaCimaActual;
+    }
+
+    function cargarInformacionCima(nombreMedicamento) {
+      consultaCimaActual += 1;
+      nombreCimaPendiente = nombreMedicamento;
+      resultadoCimaActual = null;
+      promesaCimaActual = null;
+      tipoCimaSolicitado = null;
+
+      cimaDesplegar.setAttribute("aria-expanded", "false");
+      cimaContenido.classList.add("oculto");
+      cimaEstado.textContent = "Elige qué imagen quieres consultar.";
+      cimaFotos.innerHTML = "";
+      cimaFotos.classList.add("oculto");
+      cimaSelector.classList.remove("oculto");
+      cimaBotonEnvase.classList.remove("activo", "oculto");
+      cimaBotonForma.classList.remove("activo", "oculto");
+      cimaBotonEnvase.setAttribute("aria-selected", "false");
+      cimaBotonForma.setAttribute("aria-selected", "false");
+      cimaDatos.textContent = "";
+      cimaDatos.classList.add("oculto");
+    }
+
+    cimaDesplegar.addEventListener("click", () => {
+      const abierto = cimaDesplegar.getAttribute("aria-expanded") === "true";
+      cimaDesplegar.setAttribute("aria-expanded", abierto ? "false" : "true");
+      cimaContenido.classList.toggle("oculto", abierto);
+    });
     cimaBotonEnvase.addEventListener("click", () => mostrarFotoCima("envase"));
     cimaBotonForma.addEventListener("click", () => mostrarFotoCima("forma"));
     cimaVisorCerrar.addEventListener("click", cerrarVisorCima);
