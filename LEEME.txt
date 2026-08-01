@@ -1,5 +1,20 @@
-v0.6.2
-- Próxima
-- Actualizado el
-- Oculto aviso amarillo
-- Texto retirada
+FARMACIA BAIONA — FBP v0.6.3
+
+CAMBIOS
+- «Próxima» se muestra en azul real en pastillas, puntos y leyenda.
+- El calendario de «Próxima recogida» muestra dinámicamente la fecha de hoy.
+- El calendario es mayor y lleva cabecera azul.
+- «Actualizado el...» se muestra sin segundos.
+- Al marcar una receta como retirada se guarda la fecha real.
+- Se muestra: «Marcada como retirada el [fecha]».
+- Al deshacer la retirada también se borra la fecha.
+- El botón pasa a llamarse «Deshacer retirada».
+
+SE MANTIENE SIN CAMBIOS
+- QR.
+- Importación JSON.
+- Caducidades.
+- Cálculo temporal.
+- Estrella de última del listado.
+- Buscador.
+- Ajustes.

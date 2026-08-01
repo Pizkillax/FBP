@@ -192,6 +192,33 @@
       margin-bottom: 8px;
     }
 
+    .calendario-hoy {
+      width: 72px;
+      margin: 0 auto 10px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #B9D2FF;
+      box-shadow: 0 2px 8px rgba(31,99,197,.14);
+      background: white;
+    }
+
+    .calendario-hoy-mes {
+      background: #1F63C5;
+      color: white;
+      font-size: .74rem;
+      font-weight: 800;
+      letter-spacing: .08em;
+      padding: 5px 4px;
+    }
+
+    .calendario-hoy-dia {
+      color: var(--texto);
+      font-size: 2rem;
+      font-weight: 850;
+      line-height: 1;
+      padding: 9px 4px 10px;
+    }
+
     .resumen-titulo {
       margin: 0;
       color: var(--verde);
@@ -682,7 +709,7 @@
       <div class="ajustes-info">
         <strong>FBP</strong><br>
         Farmacia Baiona Pacientes
-        <div class="ajustes-version">Versión 0.6.1</div>
+        <div class="ajustes-version">Versión 0.6.3</div>
 
         <hr class="ajustes-separador">
 
@@ -775,7 +802,7 @@
     const CLAVE_DATOS = "farmacia_baiona_datos_v1";
     const CLAVE_RETIRADAS = "farmacia_baiona_retiradas_v1";
     let datosActuales = null;
-    let dispensacionesRetiradas = new Set();
+    let dispensacionesRetiradas = new Map();
     let eventoInstalacion = null;
 
     const archivoJson = document.getElementById("archivoJson");
@@ -839,6 +866,16 @@
       }).format(fecha);
     }
 
+    function fechaRetiradaBonita(fechaIsoCompleta) {
+      if (!fechaIsoCompleta) return "";
+      const fecha = new Date(fechaIsoCompleta);
+      return new Intl.DateTimeFormat("es-ES", {
+        day: "numeric",
+        month: "long",
+        year: "numeric"
+      }).format(fecha);
+    }
+
     function fechaCortaBonita(fechaISO) {
       if (!fechaISO) return "";
       const fecha = new Date(fechaISO + "T00:00:00");
@@ -847,6 +884,18 @@
         month: "long",
         year: "numeric"
       }).format(fecha);
+    }
+
+    function calendarioHoyHtml() {
+      const hoy = new Date();
+      const mes = new Intl.DateTimeFormat("es-ES", { month: "short" })
+        .format(hoy)
+        .replace(".", "")
+        .toLocaleUpperCase("es-ES");
+      return `<div class="calendario-hoy" aria-label="Hoy ${hoy.getDate()} de ${mes}">
+        <div class="calendario-hoy-mes">${mes}</div>
+        <div class="calendario-hoy-dia">${hoy.getDate()}</div>
+      </div>`;
     }
 
     function fechaLocalISO() {
@@ -887,22 +936,42 @@
       if (!guardadas) return;
 
       try {
-        const claves = JSON.parse(guardadas);
-        if (Array.isArray(claves)) {
-          dispensacionesRetiradas = new Set(claves.filter(clave => typeof clave === "string"));
+        const contenido = JSON.parse(guardadas);
+
+        if (Array.isArray(contenido)) {
+          dispensacionesRetiradas = new Map(
+            contenido
+              .filter(clave => typeof clave === "string")
+              .map(clave => [clave, null])
+          );
+          guardarRetiradas();
+          return;
+        }
+
+        if (contenido && typeof contenido === "object") {
+          dispensacionesRetiradas = new Map(
+            Object.entries(contenido).filter(([clave]) => typeof clave === "string")
+          );
         }
       } catch {
         localStorage.removeItem(CLAVE_RETIRADAS);
-        dispensacionesRetiradas = new Set();
+        dispensacionesRetiradas = new Map();
       }
     }
 
     function guardarRetiradas() {
-      localStorage.setItem(CLAVE_RETIRADAS, JSON.stringify([...dispensacionesRetiradas]));
+      localStorage.setItem(
+        CLAVE_RETIRADAS,
+        JSON.stringify(Object.fromEntries(dispensacionesRetiradas))
+      );
     }
 
     function estaRetirada(item) {
       return dispensacionesRetiradas.has(claveDispensacion(item));
+    }
+
+    function fechaRetirada(item) {
+      return dispensacionesRetiradas.get(claveDispensacion(item)) || "";
     }
 
     function estadoDispensacion(item) {
@@ -918,7 +987,10 @@
     }
 
     function marcarComoRetirada(item) {
-      dispensacionesRetiradas.add(claveDispensacion(item));
+      dispensacionesRetiradas.set(
+        claveDispensacion(item),
+        new Date().toISOString()
+      );
       guardarRetiradas();
     }
 
@@ -1034,11 +1106,18 @@
 
       nombrePaciente.textContent = datosActuales.paciente || "Paciente";
       const generado = datosActuales.generado_el
-        ? new Date(datosActuales.generado_el).toLocaleString("es-ES")
-        : "Fecha no disponible";
+        ? new Date(datosActuales.generado_el)
+        : null;
+
+      const generadoTexto = generado
+        ? `${generado.toLocaleDateString("es-ES")} a las ${generado.toLocaleTimeString("es-ES", {
+            hour: "2-digit",
+            minute: "2-digit"
+          })}`
+        : "fecha no disponible";
 
       fechaGeneracion.textContent =
-        `Actualizado el ${generado} · ${datosActuales.dispensaciones.length} dispensaciones`;
+        `Actualizado el ${generadoTexto} · ${datosActuales.dispensaciones.length} dispensaciones`;
 
       saludoPaciente.textContent = `Hola, ${primerNombre(datosActuales.paciente)}.`;
       datosPaciente.classList.remove("oculto");
@@ -1061,7 +1140,7 @@
       const disponibles = ordenadas.filter(item => estadoDispensacion(item) === "disponible");
 
       if (disponibles.length > 0) {
-        resumenIcono.textContent = "✅";
+        resumenIcono.innerHTML = "✅";
         resumenTitulo.textContent = "Disponible para recoger hoy";
         resumenFecha.textContent = fechaBonita(hoy);
         resumenMedicamentos.innerHTML = disponibles
@@ -1077,7 +1156,7 @@
       const siguiente = ordenadas.find(item => estadoDispensacion(item) === "pendiente");
 
       if (!siguiente) {
-        resumenIcono.textContent = "✅";
+        resumenIcono.innerHTML = "✅";
         resumenTitulo.textContent = "No hay más recetas próximas";
         resumenFecha.textContent = "";
         resumenMedicamentos.innerHTML = "";
@@ -1091,7 +1170,7 @@
       );
       const dias = diasEntre(hoy, siguiente.fecha_activacion);
 
-      resumenIcono.textContent = "📅";
+      resumenIcono.innerHTML = calendarioHoyHtml();
       resumenTitulo.textContent = "Próxima recogida";
       resumenFecha.textContent = fechaBonita(siguiente.fecha_activacion);
       resumenMedicamentos.innerHTML = mismaFecha
@@ -1133,7 +1212,7 @@
         if (estadosFecha.includes("disponible")) {
           etiquetaFecha = '<span class="etiqueta">Disponible</span>';
         } else if (estadosFecha.every(estado => estado === "retirada")) {
-          etiquetaFecha = '<span class="etiqueta etiqueta-retirada">✓ Retirada</span><div class="meta-retirada">El paciente la marcó como retirada.</div>';
+          etiquetaFecha = '<span class="etiqueta etiqueta-retirada">✓ Retirada</span><div class="meta-retirada">Marcada como retirada.</div>';
         } else if (estadosFecha.every(estado => estado === "caducada")) {
           etiquetaFecha = '<span class="etiqueta etiqueta-caducada">Caducada</span>';
         } else if (dias <= 7 && estadosFecha.includes("pendiente")) {
@@ -1150,7 +1229,7 @@
           if (estado === "disponible") {
             etiquetaEstado = '<span class="etiqueta">Disponible</span>';
           } else if (estado === "retirada") {
-            etiquetaEstado = '<span class="etiqueta etiqueta-retirada">✓ Retirada</span><div class="meta-retirada">El paciente la marcó como retirada.</div>';
+            etiquetaEstado = '<span class="etiqueta etiqueta-retirada">✓ Retirada</span><div class="meta-retirada">Marcada como retirada.</div>';
           } else if (estado === "caducada") {
             etiquetaEstado = '<span class="etiqueta etiqueta-caducada">Caducada</span>';
           }
@@ -1158,6 +1237,9 @@
           html += `<article class="medicamento ${estado === "retirada" ? "retirada" : ""}" data-medicamento="${encodeURIComponent(item.medicamento)}">
             <strong>${escaparHtml(item.medicamento)}</strong>
             ${etiquetaEstado}
+            ${estado === "retirada" && fechaRetirada(item)
+              ? `<div class="fila-caducidad">Marcada como retirada el ${escaparHtml(fechaRetiradaBonita(fechaRetirada(item)))}</div>`
+              : ""}
             ${item.ultima ? '<span class="etiqueta">Última dispensación</span>' : ""}
           </article>`;
         }
@@ -1241,11 +1323,11 @@
             data-fecha="${escaparHtml(item.fecha_activacion)}"
             data-nombre="${encodeURIComponent(item.medicamento)}">✓ Marcar como retirado</button>`;
         } else if (estado === "retirada") {
-          etiqueta = '<span class="etiqueta etiqueta-retirada">✓ Retirada</span><div class="meta-retirada">El paciente la marcó como retirada.</div>';
+          etiqueta = '<span class="etiqueta etiqueta-retirada">✓ Retirada</span><div class="meta-retirada">Marcada como retirada.</div>';
           accion = `<button class="accion-dispensacion accion-secundaria"
             data-accion-dispensacion="deshacer"
             data-fecha="${escaparHtml(item.fecha_activacion)}"
-            data-nombre="${encodeURIComponent(item.medicamento)}">↩ Marcar de nuevo como próxima</button>`;
+            data-nombre="${encodeURIComponent(item.medicamento)}">↩ Deshacer retirada</button>`;
         } else if (estado === "caducada") {
           etiqueta = '<span class="etiqueta etiqueta-caducada">Caducada</span>';
         }
@@ -1261,6 +1343,9 @@
               ? `<div class="fila-caducidad">Disponible hasta: ${escaparHtml(fechaCortaBonita(item.fecha_caducidad))}</div>`
               : ""}
             <div class="fila-dispensacion-estado">${etiqueta}</div>
+            ${estado === "retirada" && fechaRetirada(item)
+              ? `<div class="fila-caducidad">Marcada como retirada el ${escaparHtml(fechaRetiradaBonita(fechaRetirada(item)))}</div>`
+              : ""}
           </div>
           ${accion}
         </div>`;
@@ -1381,7 +1466,7 @@
 
       localStorage.removeItem(CLAVE_DATOS);
       localStorage.removeItem(CLAVE_RETIRADAS);
-      dispensacionesRetiradas = new Set();
+      dispensacionesRetiradas = new Map();
       datosActuales = null;
       busqueda.value = "";
       datosPaciente.classList.add("oculto");
