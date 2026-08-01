@@ -557,6 +557,32 @@
       line-height: 1.4;
     }
 
+    .pestanas-dispensaciones {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 14px;
+      padding: 4px;
+      background: var(--verde-claro);
+      border-radius: 13px;
+    }
+
+    .pestana-dispensaciones {
+      min-height: 42px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--gris);
+      font-size: .82rem;
+      line-height: 1.2;
+    }
+
+    .pestana-dispensaciones.activa {
+      background: white;
+      color: var(--verde);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, .10);
+    }
+
     .fila-dispensacion {
       display: flex;
       justify-content: space-between;
@@ -787,6 +813,10 @@
 
       <section class="panel">
         <h2 class="fecha-titulo">Dispensaciones</h2>
+        <div class="pestanas-dispensaciones" role="tablist" aria-label="Tipo de dispensaciones">
+          <button id="pestanaActivas" class="pestana-dispensaciones activa" type="button" role="tab" aria-selected="true">Disponibles y próximas</button>
+          <button id="pestanaHistorico" class="pestana-dispensaciones" type="button" role="tab" aria-selected="false">Histórico</button>
+        </div>
         <div id="detalleFechas"></div>
       </section>
     </section>
@@ -832,10 +862,14 @@
     const detalleTexto = document.getElementById("detalleTexto");
     const detalleProgreso = document.getElementById("detalleProgreso");
     const detalleAvisoUltima = document.getElementById("detalleAvisoUltima");
+    const pestanaActivas = document.getElementById("pestanaActivas");
+    const pestanaHistorico = document.getElementById("pestanaHistorico");
     const detalleFechas = document.getElementById("detalleFechas");
     const botonesNav = document.querySelectorAll(".nav-btn");
     let vistaAnteriorDetalle = "inicio";
     let medicamentoDetalleActual = null;
+    let dispensacionesDetalleActual = [];
+    let pestanaDetalleActual = "activas";
 
     function abrirAjustes() {
       modalAjustes.classList.remove("oculto");
@@ -1270,48 +1304,27 @@
       renderizarListado(resultados, listadoBusqueda);
     }
 
-    function abrirDetalleMedicamento(nombreMedicamento) {
-      if (!datosActuales) return;
+    function renderizarDispensacionesDetalle() {
+      pestanaActivas.classList.toggle("activa", pestanaDetalleActual === "activas");
+      pestanaHistorico.classList.toggle("activa", pestanaDetalleActual === "historico");
+      pestanaActivas.setAttribute("aria-selected", pestanaDetalleActual === "activas" ? "true" : "false");
+      pestanaHistorico.setAttribute("aria-selected", pestanaDetalleActual === "historico" ? "true" : "false");
 
-      const dispensaciones = datosActuales.dispensaciones
-        .filter(item => item.medicamento === nombreMedicamento)
-        .sort((a, b) => a.fecha_activacion.localeCompare(b.fecha_activacion));
-
-      if (!dispensaciones.length) return;
-
-      const ultimaMarcada = dispensaciones.some(item => item.ultima);
-      medicamentoDetalleActual = nombreMedicamento;
-
-      detalleNombre.textContent = nombreMedicamento;
-      const resumenEstados = dispensaciones.reduce((acc, item) => {
+      const visibles = dispensacionesDetalleActual.filter(item => {
         const estado = estadoDispensacion(item);
-        acc[estado] = (acc[estado] || 0) + 1;
-        return acc;
-      }, {});
+        return pestanaDetalleActual === "activas"
+          ? estado === "disponible" || estado === "próxima"
+          : estado === "retirada" || estado === "caducada";
+      });
 
-      detalleNumero.textContent = dispensaciones.length;
+      if (!visibles.length) {
+        detalleFechas.innerHTML = `<div class="vacio">${pestanaDetalleActual === "activas"
+          ? "No hay dispensaciones disponibles ni próximas."
+          : "No hay dispensaciones en el histórico."}</div>`;
+        return;
+      }
 
-      const partesResumen = [];
-      if (resumenEstados.disponible) partesResumen.push(`${resumenEstados.disponible} disponible${resumenEstados.disponible === 1 ? "" : "s"}`);
-      if (resumenEstados.próxima) partesResumen.push(`${resumenEstados.próxima} próxima${resumenEstados.próxima === 1 ? "" : "s"}`);
-      if (resumenEstados.retirada) partesResumen.push(`${resumenEstados.retirada} retirada${resumenEstados.retirada === 1 ? "" : "s"}`);
-      if (resumenEstados.caducada) partesResumen.push(`${resumenEstados.caducada} caducada${resumenEstados.caducada === 1 ? "" : "s"}`);
-
-      detalleTexto.textContent = partesResumen.length
-        ? partesResumen.join(" · ")
-        : `${dispensaciones.length} dispensaciones registradas.`;
-
-      detalleProgreso.innerHTML = dispensaciones.map(item => {
-        const estado = estadoDispensacion(item);
-        let clase = `punto-dispensacion ${estado}`;
-        if (item.ultima) clase += " ultima";
-        const simbolo = estado === "retirada" ? "✓" : "";
-        return `<span class="${clase}" title="${escaparHtml(fechaBonita(item.fecha_activacion))}: ${estado}">${simbolo}</span>`;
-      }).join("");
-
-      detalleAvisoUltima.classList.toggle("oculto", !ultimaMarcada);
-
-      detalleFechas.innerHTML = dispensaciones.map(item => {
+      detalleFechas.innerHTML = visibles.map(item => {
         const estado = estadoDispensacion(item);
         let etiqueta = '<span class="etiqueta etiqueta-pendiente">Próxima</span>';
         let accion = "";
@@ -1350,6 +1363,54 @@
           ${accion}
         </div>`;
       }).join("");
+    }
+
+    function abrirDetalleMedicamento(nombreMedicamento, conservarPestana = false) {
+      if (!datosActuales) return;
+
+      const dispensaciones = datosActuales.dispensaciones
+        .filter(item => item.medicamento === nombreMedicamento)
+        .sort((a, b) => a.fecha_activacion.localeCompare(b.fecha_activacion));
+
+      if (!dispensaciones.length) return;
+
+      if (!conservarPestana || medicamentoDetalleActual !== nombreMedicamento) {
+        pestanaDetalleActual = "activas";
+      }
+
+      const ultimaMarcada = dispensaciones.some(item => item.ultima);
+      medicamentoDetalleActual = nombreMedicamento;
+      dispensacionesDetalleActual = dispensaciones;
+
+      detalleNombre.textContent = nombreMedicamento;
+      const resumenEstados = dispensaciones.reduce((acc, item) => {
+        const estado = estadoDispensacion(item);
+        acc[estado] = (acc[estado] || 0) + 1;
+        return acc;
+      }, {});
+
+      detalleNumero.textContent = dispensaciones.length;
+
+      const partesResumen = [];
+      if (resumenEstados.disponible) partesResumen.push(`${resumenEstados.disponible} disponible${resumenEstados.disponible === 1 ? "" : "s"}`);
+      if (resumenEstados.próxima) partesResumen.push(`${resumenEstados.próxima} próxima${resumenEstados.próxima === 1 ? "" : "s"}`);
+      if (resumenEstados.retirada) partesResumen.push(`${resumenEstados.retirada} retirada${resumenEstados.retirada === 1 ? "" : "s"}`);
+      if (resumenEstados.caducada) partesResumen.push(`${resumenEstados.caducada} caducada${resumenEstados.caducada === 1 ? "" : "s"}`);
+
+      detalleTexto.textContent = partesResumen.length
+        ? partesResumen.join(" · ")
+        : `${dispensaciones.length} dispensaciones registradas.`;
+
+      detalleProgreso.innerHTML = dispensaciones.map(item => {
+        const estado = estadoDispensacion(item);
+        let clase = `punto-dispensacion ${estado}`;
+        if (item.ultima) clase += " ultima";
+        const simbolo = estado === "retirada" ? "✓" : "";
+        return `<span class="${clase}" title="${escaparHtml(fechaBonita(item.fecha_activacion))}: ${estado}">${simbolo}</span>`;
+      }).join("");
+
+      detalleAvisoUltima.classList.toggle("oculto", !ultimaMarcada);
+      renderizarDispensacionesDetalle();
 
       document.getElementById("vistaInicio").classList.add("oculto");
       document.getElementById("vistaTodas").classList.add("oculto");
@@ -1402,7 +1463,7 @@
         renderizarInicio();
         renderizarListado(datosActuales.dispensaciones, listadoTodas);
         renderizarBusqueda();
-        abrirDetalleMedicamento(medicamentoDetalleActual || nombre);
+        abrirDetalleMedicamento(medicamentoDetalleActual || nombre, true);
         return;
       }
 
@@ -1416,6 +1477,16 @@
 
       vistaAnteriorDetalle = vistaVisible;
       abrirDetalleMedicamento(nombreMedicamento);
+    });
+
+    pestanaActivas.addEventListener("click", () => {
+      pestanaDetalleActual = "activas";
+      renderizarDispensacionesDetalle();
+    });
+
+    pestanaHistorico.addEventListener("click", () => {
+      pestanaDetalleActual = "historico";
+      renderizarDispensacionesDetalle();
     });
 
     volverDetalleBtn.addEventListener("click", () => mostrarVista(vistaAnteriorDetalle));
