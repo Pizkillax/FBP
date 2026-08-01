@@ -455,11 +455,7 @@
     }
 
     .cima-cabecera {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
 
     .cima-titulo {
@@ -473,34 +469,66 @@
       line-height: 1.4;
     }
 
-    .cima-fotos {
+    .cima-selector {
       display: grid;
-      grid-template-columns: 1fr;
-      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 14px;
+      padding: 4px;
+      border-radius: 14px;
+      background: #f0f5f1;
+    }
+
+    .cima-selector button {
+      border: 0;
+      border-radius: 11px;
+      padding: 10px 8px;
+      background: transparent;
+      color: var(--gris);
+      font: inherit;
+      font-weight: 750;
+      cursor: pointer;
+    }
+
+    .cima-selector button.activo {
+      background: #fff;
+      color: var(--verde);
+      box-shadow: 0 2px 8px rgba(30, 70, 40, 0.12);
+    }
+
+    .cima-fotos {
       margin-top: 12px;
     }
 
     .cima-foto {
       border: 1px solid #e1e7e3;
-      border-radius: 14px;
-      padding: 10px;
+      border-radius: 16px;
+      padding: 12px;
       background: #fff;
       text-align: center;
     }
 
-    .cima-foto strong {
+    .cima-foto-titulo {
       display: block;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
       color: var(--verde);
+      font-weight: 800;
     }
 
     .cima-foto img {
       display: block;
       width: 100%;
-      max-height: 310px;
+      height: 250px;
       object-fit: contain;
-      border-radius: 10px;
+      border-radius: 12px;
       background: #fff;
+      cursor: zoom-in;
+    }
+
+    .cima-ampliar {
+      margin: 9px 0 0;
+      color: var(--gris);
+      font-size: 0.78rem;
     }
 
     .cima-datos {
@@ -510,9 +538,59 @@
       line-height: 1.4;
     }
 
+    .cima-visor {
+      position: fixed;
+      inset: 0;
+      z-index: 3000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background: rgba(0, 0, 0, 0.82);
+    }
+
+    .cima-visor.oculto {
+      display: none;
+    }
+
+    .cima-visor-contenido {
+      position: relative;
+      width: min(100%, 780px);
+      max-height: 92vh;
+      padding: 16px;
+      border-radius: 18px;
+      background: #fff;
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+    }
+
+    .cima-visor img {
+      display: block;
+      width: 100%;
+      max-height: calc(92vh - 32px);
+      object-fit: contain;
+      background: #fff;
+      border-radius: 12px;
+    }
+
+    .cima-visor-cerrar {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 42px;
+      height: 42px;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.94);
+      color: #222;
+      font-size: 1.35rem;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    }
+
     @media (min-width: 580px) {
-      .cima-fotos {
-        grid-template-columns: 1fr 1fr;
+      .cima-foto img {
+        height: 320px;
       }
     }
 
@@ -883,9 +961,13 @@
 
       <section id="cimaPanel" class="panel oculto">
         <div class="cima-cabecera">
-          <h2 class="cima-titulo">Imágenes del medicamento</h2>
+          <h2 class="cima-titulo">Aspecto del medicamento</h2>
         </div>
         <div id="cimaEstado" class="cima-estado">Consultando CIMA…</div>
+        <div id="cimaSelector" class="cima-selector oculto" role="tablist" aria-label="Imagen del medicamento">
+          <button id="cimaBotonEnvase" type="button" role="tab" aria-selected="true">Envase</button>
+          <button id="cimaBotonForma" type="button" role="tab" aria-selected="false">Comprimido / forma</button>
+        </div>
         <div id="cimaFotos" class="cima-fotos oculto"></div>
         <div id="cimaDatos" class="cima-datos oculto"></div>
       </section>
@@ -900,6 +982,13 @@
       </section>
     </section>
   </main>
+
+  <div id="cimaVisor" class="cima-visor oculto" role="dialog" aria-modal="true" aria-label="Imagen ampliada">
+    <div class="cima-visor-contenido">
+      <button id="cimaVisorCerrar" class="cima-visor-cerrar" type="button" aria-label="Cerrar imagen">×</button>
+      <img id="cimaVisorImagen" src="" alt="Imagen ampliada del medicamento">
+    </div>
+  </div>
 
   <nav class="navegacion" aria-label="Navegación principal">
     <button class="nav-btn activo" data-vista="inicio"><span>🏠</span>Inicio</button>
@@ -945,8 +1034,14 @@
     const detalleAvisoUltima = document.getElementById("detalleAvisoUltima");
     const cimaPanel = document.getElementById("cimaPanel");
     const cimaEstado = document.getElementById("cimaEstado");
+    const cimaSelector = document.getElementById("cimaSelector");
+    const cimaBotonEnvase = document.getElementById("cimaBotonEnvase");
+    const cimaBotonForma = document.getElementById("cimaBotonForma");
     const cimaFotos = document.getElementById("cimaFotos");
     const cimaDatos = document.getElementById("cimaDatos");
+    const cimaVisor = document.getElementById("cimaVisor");
+    const cimaVisorImagen = document.getElementById("cimaVisorImagen");
+    const cimaVisorCerrar = document.getElementById("cimaVisorCerrar");
     const pestanaActivas = document.getElementById("pestanaActivas");
     const pestanaHistorico = document.getElementById("pestanaHistorico");
     const detalleFechas = document.getElementById("detalleFechas");
@@ -1592,6 +1687,47 @@
       return new URL(url, CIMA_BASE).toString();
     }
 
+    function urlCimaAltaResolucion(url) {
+      const completa = urlCimaCompleta(url);
+      return completa.replace("/fotos/thumbnails/", "/fotos/");
+    }
+
+    function abrirVisorCima(src, alt) {
+      if (!src) return;
+      cimaVisorImagen.src = src;
+      cimaVisorImagen.alt = alt || "Imagen ampliada del medicamento";
+      cimaVisor.classList.remove("oculto");
+      document.body.style.overflow = "hidden";
+    }
+
+    function cerrarVisorCima() {
+      cimaVisor.classList.add("oculto");
+      cimaVisorImagen.src = "";
+      document.body.style.overflow = "";
+    }
+
+    function mostrarFotoCima(tipo) {
+      const tarjetas = Array.from(cimaFotos.querySelectorAll(".cima-foto"));
+      tarjetas.forEach(tarjeta => tarjeta.classList.toggle("oculto", tarjeta.dataset.tipo !== tipo));
+
+      const envaseActivo = tipo === "envase";
+      cimaBotonEnvase.classList.toggle("activo", envaseActivo);
+      cimaBotonForma.classList.toggle("activo", !envaseActivo);
+      cimaBotonEnvase.setAttribute("aria-selected", envaseActivo ? "true" : "false");
+      cimaBotonForma.setAttribute("aria-selected", envaseActivo ? "false" : "true");
+    }
+
+    function crearTarjetaFotoCima(foto, tipo, titulo, alt) {
+      if (!foto || !foto.url) return "";
+      const miniatura = urlCimaCompleta(foto.url);
+      const alta = urlCimaAltaResolucion(foto.url);
+      return `<div class="cima-foto" data-tipo="${tipo}">
+        <span class="cima-foto-titulo">${escaparHtml(titulo)}</span>
+        <img src="${escaparHtml(alta)}" data-fallback="${escaparHtml(miniatura)}" alt="${escaparHtml(alt)}" loading="lazy">
+        <p class="cima-ampliar">Toca la imagen para ampliarla</p>
+      </div>`;
+    }
+
     function mostrarResultadoCima(datos, nombreConsultado, idConsulta) {
       if (idConsulta !== consultaCimaActual || medicamentoDetalleActual !== nombreConsultado || !datos) return;
 
@@ -1600,13 +1736,28 @@
         : datos.fotos && datos.fotos.url ? [datos.fotos] : [];
       const envase = fotos.find(foto => String(foto.tipo || "").toLowerCase() === "materialas");
       const forma = fotos.find(foto => String(foto.tipo || "").toLowerCase() === "formafarmac");
-      const tarjetas = [];
-
-      if (envase) tarjetas.push(`<div class="cima-foto"><strong>Envase</strong><img src="${escaparHtml(urlCimaCompleta(envase.url))}" alt="Fotografía del envase" loading="lazy"></div>`);
-      if (forma) tarjetas.push(`<div class="cima-foto"><strong>Forma farmacéutica</strong><img src="${escaparHtml(urlCimaCompleta(forma.url))}" alt="Fotografía de la forma farmacéutica" loading="lazy"></div>`);
+      const tarjetas = [
+        crearTarjetaFotoCima(envase, "envase", "Envase", "Fotografía del envase"),
+        crearTarjetaFotoCima(forma, "forma", "Comprimido / forma farmacéutica", "Fotografía de la forma farmacéutica")
+      ].filter(Boolean);
 
       cimaFotos.innerHTML = tarjetas.join("");
       cimaFotos.classList.toggle("oculto", tarjetas.length === 0);
+      cimaSelector.classList.toggle("oculto", tarjetas.length < 2);
+      cimaBotonEnvase.classList.toggle("oculto", !envase);
+      cimaBotonForma.classList.toggle("oculto", !forma);
+
+      cimaFotos.querySelectorAll("img").forEach(imagen => {
+        imagen.addEventListener("error", () => {
+          const fallback = imagen.dataset.fallback;
+          if (fallback && imagen.src !== fallback) imagen.src = fallback;
+        }, { once: true });
+        imagen.addEventListener("click", () => abrirVisorCima(imagen.currentSrc || imagen.src, imagen.alt));
+      });
+
+      if (envase) mostrarFotoCima("envase");
+      else if (forma) mostrarFotoCima("forma");
+
       cimaEstado.textContent = tarjetas.length
         ? "Imágenes oficiales facilitadas por CIMA."
         : "CIMA ha identificado el medicamento, pero no dispone de fotografías.";
@@ -1622,6 +1773,9 @@
       cimaEstado.textContent = "Consultando CIMA…";
       cimaFotos.innerHTML = "";
       cimaFotos.classList.add("oculto");
+      cimaSelector.classList.add("oculto");
+      cimaBotonEnvase.classList.remove("activo", "oculto");
+      cimaBotonForma.classList.remove("activo", "oculto");
       cimaDatos.textContent = "";
       cimaDatos.classList.add("oculto");
 
@@ -1663,6 +1817,16 @@
           : "Sin conexión: las imágenes de CIMA no están disponibles.";
       }
     }
+
+    cimaBotonEnvase.addEventListener("click", () => mostrarFotoCima("envase"));
+    cimaBotonForma.addEventListener("click", () => mostrarFotoCima("forma"));
+    cimaVisorCerrar.addEventListener("click", cerrarVisorCima);
+    cimaVisor.addEventListener("click", evento => {
+      if (evento.target === cimaVisor) cerrarVisorCima();
+    });
+    document.addEventListener("keydown", evento => {
+      if (evento.key === "Escape" && !cimaVisor.classList.contains("oculto")) cerrarVisorCima();
+    });
 
     function abrirDetalleMedicamento(nombreMedicamento, conservarPestana = false) {
       if (!datosActuales) return;
