@@ -1,4 +1,4 @@
-const CACHE = "farmacia-baiona-v0-6-3-pestanas-filtro-corregido";
+const CACHE = "farmacia-baiona-v0-6-3-pestanas-todas";
 const ARCHIVOS = [
   "./",
   "./index.html",

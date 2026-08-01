@@ -773,6 +773,10 @@
 
     <section id="vistaTodas" class="oculto">
       <section class="panel">
+        <div class="pestanas-dispensaciones" role="tablist" aria-label="Tipo de recetas">
+          <button id="pestanaTodasActivas" class="pestana-dispensaciones activa" type="button" role="tab" aria-selected="true">Disponibles y próximas</button>
+          <button id="pestanaTodasHistorico" class="pestana-dispensaciones" type="button" role="tab" aria-selected="false">Histórico</button>
+        </div>
         <div id="listadoTodas" class="vacio">Importa un archivo para ver las recetas.</div>
       </section>
     </section>
@@ -853,6 +857,8 @@
     const resumenMedicamentos = document.getElementById("resumenMedicamentos");
     const resumenContador = document.getElementById("resumenContador");
     const listadoTodas = document.getElementById("listadoTodas");
+    const pestanaTodasActivas = document.getElementById("pestanaTodasActivas");
+    const pestanaTodasHistorico = document.getElementById("pestanaTodasHistorico");
     const busqueda = document.getElementById("busqueda");
     const listadoBusqueda = document.getElementById("listadoBusqueda");
     const vistaDetalle = document.getElementById("vistaDetalle");
@@ -870,6 +876,7 @@
     let medicamentoDetalleActual = null;
     let dispensacionesDetalleActual = [];
     let pestanaDetalleActual = "activas";
+    let pestanaTodasActual = "activas";
 
     function abrirAjustes() {
       modalAjustes.classList.remove("oculto");
@@ -1160,7 +1167,7 @@
       inicioConDatos.classList.remove("oculto");
 
       renderizarInicio();
-      renderizarListado(datosActuales.dispensaciones, listadoTodas);
+      renderizarTodas();
       renderizarBusqueda();
     }
 
@@ -1282,6 +1289,34 @@
       }
 
       contenedor.innerHTML = html;
+    }
+
+    function renderizarTodas() {
+      pestanaTodasActivas.classList.toggle("activa", pestanaTodasActual === "activas");
+      pestanaTodasHistorico.classList.toggle("activa", pestanaTodasActual === "historico");
+      pestanaTodasActivas.setAttribute("aria-selected", pestanaTodasActual === "activas" ? "true" : "false");
+      pestanaTodasHistorico.setAttribute("aria-selected", pestanaTodasActual === "historico" ? "true" : "false");
+
+      if (!datosActuales) {
+        listadoTodas.innerHTML = '<div class="vacio">Importa un archivo para ver las recetas.</div>';
+        return;
+      }
+
+      const visibles = datosActuales.dispensaciones.filter(item => {
+        const estado = estadoDispensacion(item);
+        return pestanaTodasActual === "activas"
+          ? estado === "disponible" || estado === "pendiente"
+          : estado === "retirada" || estado === "caducada";
+      });
+
+      if (!visibles.length) {
+        listadoTodas.innerHTML = `<div class="vacio">${pestanaTodasActual === "activas"
+          ? "No hay recetas disponibles ni próximas."
+          : "No hay recetas en el histórico."}</div>`;
+        return;
+      }
+
+      renderizarListado(visibles, listadoTodas);
     }
 
     function renderizarBusqueda() {
@@ -1461,7 +1496,7 @@
         }
 
         renderizarInicio();
-        renderizarListado(datosActuales.dispensaciones, listadoTodas);
+        renderizarTodas();
         renderizarBusqueda();
         abrirDetalleMedicamento(medicamentoDetalleActual || nombre, true);
         return;
@@ -1477,6 +1512,16 @@
 
       vistaAnteriorDetalle = vistaVisible;
       abrirDetalleMedicamento(nombreMedicamento);
+    });
+
+    pestanaTodasActivas.addEventListener("click", () => {
+      pestanaTodasActual = "activas";
+      renderizarTodas();
+    });
+
+    pestanaTodasHistorico.addEventListener("click", () => {
+      pestanaTodasActual = "historico";
+      renderizarTodas();
     });
 
     pestanaActivas.addEventListener("click", () => {
