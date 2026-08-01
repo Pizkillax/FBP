@@ -291,7 +291,7 @@
       color: var(--gris-retirada);
     }
 
-    .etiqueta-próxima {
+    .etiqueta-pendiente {
       background: var(--azul-próxima-claro);
       color: var(--azul-próxima);
     }
@@ -471,7 +471,7 @@
       position: relative;
     }
 
-    .punto-dispensacion.próxima {
+    .punto-dispensacion.pendiente {
       background: var(--azul-próxima-claro);
       border-color: var(--azul-próxima);
     }
@@ -519,7 +519,7 @@
       display: inline-block;
     }
 
-    .leyenda-muestra.próxima {
+    .leyenda-muestra.pendiente {
       background: var(--azul-próxima-claro);
       border: 2px solid var(--azul-próxima);
     }
@@ -1212,7 +1212,7 @@
         if (estadosFecha.includes("disponible")) {
           etiquetaFecha = '<span class="etiqueta">Disponible</span>';
         } else if (estadosFecha.every(estado => estado === "retirada")) {
-          etiquetaFecha = '<span class="etiqueta etiqueta-retirada">✓ Retirada</span><div class="meta-retirada">Marcada como retirada.</div>';
+          etiquetaFecha = '<span class="etiqueta etiqueta-retirada">✓ Retirada</span>';
         } else if (estadosFecha.every(estado => estado === "caducada")) {
           etiquetaFecha = '<span class="etiqueta etiqueta-caducada">Caducada</span>';
         } else if (dias <= 7 && estadosFecha.includes("pendiente")) {
@@ -1229,7 +1229,7 @@
           if (estado === "disponible") {
             etiquetaEstado = '<span class="etiqueta">Disponible</span>';
           } else if (estado === "retirada") {
-            etiquetaEstado = '<span class="etiqueta etiqueta-retirada">✓ Retirada</span><div class="meta-retirada">Marcada como retirada.</div>';
+            etiquetaEstado = '<span class="etiqueta etiqueta-retirada">✓ Retirada</span>';
           } else if (estado === "caducada") {
             etiquetaEstado = '<span class="etiqueta etiqueta-caducada">Caducada</span>';
           }
@@ -1323,7 +1323,7 @@
             data-fecha="${escaparHtml(item.fecha_activacion)}"
             data-nombre="${encodeURIComponent(item.medicamento)}">✓ Marcar como retirado</button>`;
         } else if (estado === "retirada") {
-          etiqueta = '<span class="etiqueta etiqueta-retirada">✓ Retirada</span><div class="meta-retirada">Marcada como retirada.</div>';
+          etiqueta = '<span class="etiqueta etiqueta-retirada">✓ Retirada</span>';
           accion = `<button class="accion-dispensacion accion-secundaria"
             data-accion-dispensacion="deshacer"
             data-fecha="${escaparHtml(item.fecha_activacion)}"
@@ -1387,7 +1387,7 @@
 
         if (accion === "retirar") {
           const confirmado = confirm(
-            `¿Confirmas que ya has recogido este medicamento?\n\n${nombre}\n${fechaBonita(fecha)}`
+            `¿Marcar esta receta como retirada?\n\n${nombre}`
           );
           if (!confirmado) return;
           marcarComoRetirada(item);
