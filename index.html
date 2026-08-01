@@ -1418,7 +1418,7 @@
       vistaDetalle.classList.remove("oculto");
 
       botonesNav.forEach(btn => btn.classList.remove("activo"));
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      if(!mantenerPosicion) window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
     function mostrarVista(nombre) {
@@ -1454,7 +1454,7 @@
           marcarComoRetirada(item);
         } else if (accion === "deshacer") {
           const confirmado = confirm(
-            `¿Quieres marcar de nuevo como próxima esta dispensación?\n\n${nombre}\n${fechaBonita(fecha)}`
+            `¿Deshacer la retirada de esta dispensación?\n\n${nombre}`
           );
           if (!confirmado) return;
           deshacerRetirada(item);
