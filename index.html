@@ -931,7 +931,7 @@
 
       <div class="ajustes-opciones">
         <label class="boton-archivo" for="archivoJson">📂 Importar archivo JSON</label>
-        <button id="probarCamaraBtn" class="secundario">📷 Probar cámara</button>
+        <button id="probarCamaraBtn" class="secundario">📷 Actualizar mediante QR</button>
         <button id="instalarBtn" class="secundario oculto">📱 Instalar aplicación</button>
         <button id="borrarBtn" class="peligro oculto">🗑️ Borrar datos del teléfono</button>
       </div>
@@ -955,11 +955,11 @@
   <div id="modalCamara" class="modal-fondo oculto" role="dialog" aria-modal="true" aria-labelledby="tituloCamara">
     <section class="modal-camara">
       <div class="ajustes-cabecera">
-        <h2 id="tituloCamara" class="ajustes-titulo">📷 Prueba de cámara</h2>
+        <h2 id="tituloCamara" class="ajustes-titulo">📷 Actualizar mediante QR</h2>
         <button id="cerrarCamaraBtn" class="cerrar-ajustes-btn" aria-label="Cerrar cámara">✕</button>
       </div>
       <video id="camaraVideo" class="camara-video" autoplay muted playsinline></video>
-      <p id="camaraEstado" class="camara-estado">Preparando la cámara…</p>
+      <p id="camaraEstado" class="camara-estado">Enfoca el código QR de Farmacia Baiona.</p>
       <div class="camara-acciones">
         <button id="cerrarCamaraInferiorBtn" class="secundario">Cerrar</button>
       </div>
@@ -1075,6 +1075,7 @@
     <button class="nav-btn" data-vista="buscar"><span>🔍</span>Buscar</button>
   </nav>
 
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
   <script>
     const CLAVE_DATOS = "farmacia_baiona_datos_v1";
     const CLAVE_RETIRADAS = "farmacia_baiona_retiradas_v1";
@@ -1095,6 +1096,10 @@
     const cerrarCamaraBtn = document.getElementById("cerrarCamaraBtn");
     const cerrarCamaraInferiorBtn = document.getElementById("cerrarCamaraInferiorBtn");
     let flujoCamara = null;
+    let animacionCamara = null;
+    let procesandoQrCamara = false;
+    const lienzoQr = document.createElement("canvas");
+    const contextoQr = lienzoQr.getContext("2d", { willReadFrequently: true });
     const datosPaciente = document.getElementById("datosPaciente");
     const nombrePaciente = document.getElementById("nombrePaciente");
     const fechaGeneracion = document.getElementById("fechaGeneracion");
@@ -1160,17 +1165,73 @@
     }
 
     function detenerCamara() {
+      if (animacionCamara) {
+        cancelAnimationFrame(animacionCamara);
+        animacionCamara = null;
+      }
       if (flujoCamara) {
         flujoCamara.getTracks().forEach(track => track.stop());
         flujoCamara = null;
       }
       camaraVideo.srcObject = null;
+      procesandoQrCamara = false;
     }
 
     function cerrarCamara() {
       detenerCamara();
       modalCamara.classList.add("oculto");
       document.body.style.overflow = "";
+    }
+
+    function extraerPayloadFbpDelQr(textoQr) {
+      try {
+        const direccion = new URL(textoQr, location.href);
+        const desdeConsulta = direccion.searchParams.get("fbp");
+        if (desdeConsulta) return desdeConsulta;
+
+        if (direccion.hash.startsWith("#fbp=")) {
+          return direccion.hash.slice(5);
+        }
+      } catch {
+        return "";
+      }
+
+      return "";
+    }
+
+    async function leerQrDeCamara() {
+      if (!flujoCamara || procesandoQrCamara) return;
+
+      if (camaraVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
+          camaraVideo.videoWidth && camaraVideo.videoHeight &&
+          typeof jsQR === "function") {
+        const anchoMaximo = 900;
+        const escala = Math.min(1, anchoMaximo / camaraVideo.videoWidth);
+        lienzoQr.width = Math.round(camaraVideo.videoWidth * escala);
+        lienzoQr.height = Math.round(camaraVideo.videoHeight * escala);
+        contextoQr.drawImage(camaraVideo, 0, 0, lienzoQr.width, lienzoQr.height);
+
+        const imagen = contextoQr.getImageData(0, 0, lienzoQr.width, lienzoQr.height);
+        const codigo = jsQR(imagen.data, imagen.width, imagen.height, {
+          inversionAttempts: "dontInvert"
+        });
+
+        if (codigo) {
+          const payload = extraerPayloadFbpDelQr(codigo.data);
+          if (!payload) {
+            camaraEstado.textContent = "El código leído no es un QR de actualización de FBP.";
+          } else {
+            procesandoQrCamara = true;
+            detenerCamara();
+            modalCamara.classList.add("oculto");
+            document.body.style.overflow = "";
+            await procesarPayloadFbp(payload);
+            return;
+          }
+        }
+      }
+
+      animacionCamara = requestAnimationFrame(leerQrDeCamara);
     }
 
     async function abrirCamara() {
@@ -1181,6 +1242,11 @@
 
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         camaraEstado.textContent = "Este dispositivo o navegador no permite abrir la cámara desde FBP.";
+        return;
+      }
+
+      if (typeof jsQR !== "function") {
+        camaraEstado.textContent = "No se pudo cargar el lector de códigos QR.";
         return;
       }
 
@@ -1196,7 +1262,8 @@
         });
         camaraVideo.srcObject = flujoCamara;
         await camaraVideo.play();
-        camaraEstado.textContent = "Cámara abierta correctamente. Esta pantalla es solo una prueba; todavía no lee códigos QR.";
+        camaraEstado.textContent = "Enfoca el código QR de Farmacia Baiona.";
+        animacionCamara = requestAnimationFrame(leerQrDeCamara);
       } catch (error) {
         detenerCamara();
         if (error && (error.name === "NotAllowedError" || error.name === "SecurityError")) {
@@ -1434,10 +1501,7 @@
       history.replaceState(null, "", location.pathname);
     }
 
-    async function procesarImportacionDesdeQr() {
-      const payload = obtenerPayloadFbp();
-      if (!payload) return;
-
+    async function procesarPayloadFbp(payload) {
       try {
         const datos = await decodificarDatosFbp(payload);
         validarDatos(datos);
@@ -1466,6 +1530,12 @@
         limpiarDatosQrDeLaDireccion();
         alert(`No se pudo leer el código QR:\n${error.message}`);
       }
+    }
+
+    async function procesarImportacionDesdeQr() {
+      const payload = obtenerPayloadFbp();
+      if (!payload) return;
+      await procesarPayloadFbp(payload);
     }
 
     function cargarLocalmente() {
