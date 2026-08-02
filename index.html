@@ -876,7 +876,7 @@
       bottom: 0;
       z-index: 20;
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       background: white;
       border-top: 1px solid var(--borde);
       padding-bottom: env(safe-area-inset-bottom);
@@ -1010,6 +1010,13 @@
       </section>
     </section>
 
+    <section id="vistaHistorial" class="oculto">
+      <section class="panel">
+        <h2 class="fecha-titulo">Historial</h2>
+        <div id="listadoHistorial" class="vacio">Todavía no hay medicamentos en el historial.</div>
+      </section>
+    </section>
+
     <section id="vistaDetalle" class="oculto">
       <section class="panel">
         <div class="detalle-cabecera">
@@ -1073,13 +1080,16 @@
     <button class="nav-btn activo" data-vista="inicio"><span>🏠</span>Inicio</button>
     <button class="nav-btn" data-vista="todas"><span>📋</span>Todas</button>
     <button class="nav-btn" data-vista="buscar"><span>🔍</span>Buscar</button>
+    <button class="nav-btn" data-vista="historial"><span>📖</span>Historial</button>
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
   <script>
     const CLAVE_DATOS = "farmacia_baiona_datos_v1";
     const CLAVE_RETIRADAS = "farmacia_baiona_retiradas_v1";
+    const CLAVE_HISTORIAL = "farmacia_baiona_historial_v1";
     let datosActuales = null;
+    let historialPermanente = [];
     let dispensacionesRetiradas = new Map();
     let eventoInstalacion = null;
 
@@ -1118,6 +1128,8 @@
     const pestanaTodasHistorico = document.getElementById("pestanaTodasHistorico");
     const busqueda = document.getElementById("busqueda");
     const listadoBusqueda = document.getElementById("listadoBusqueda");
+    const listadoHistorial = document.getElementById("listadoHistorial");
+    const vistaHistorial = document.getElementById("vistaHistorial");
     const vistaDetalle = document.getElementById("vistaDetalle");
     const volverDetalleBtn = document.getElementById("volverDetalleBtn");
     const detalleNombre = document.getElementById("detalleNombre");
@@ -1454,6 +1466,89 @@
       guardarRetiradas();
     }
 
+    function cargarHistorial() {
+      const guardado = localStorage.getItem(CLAVE_HISTORIAL);
+      if (!guardado) {
+        historialPermanente = [];
+        return;
+      }
+
+      try {
+        const contenido = JSON.parse(guardado);
+        historialPermanente = Array.isArray(contenido) ? contenido : [];
+      } catch {
+        localStorage.removeItem(CLAVE_HISTORIAL);
+        historialPermanente = [];
+      }
+    }
+
+    function guardarHistorial() {
+      localStorage.setItem(CLAVE_HISTORIAL, JSON.stringify(historialPermanente));
+    }
+
+    function fusionarConHistorial(datos) {
+      if (!datos || !Array.isArray(datos.dispensaciones)) return;
+
+      const indice = new Map(
+        historialPermanente.map(item => [claveDispensacion(item), item])
+      );
+
+      for (const item of datos.dispensaciones) {
+        const clave = claveDispensacion(item);
+        const anterior = indice.get(clave);
+        indice.set(clave, anterior ? { ...anterior, ...item } : { ...item });
+      }
+
+      historialPermanente = [...indice.values()].sort((a, b) =>
+        String(a.fecha_activacion).localeCompare(String(b.fecha_activacion)) ||
+        String(a.medicamento).localeCompare(String(b.medicamento), "es")
+      );
+      guardarHistorial();
+    }
+
+    function medicamentosActualesNormalizados() {
+      if (!datosActuales) return new Set();
+      return new Set(datosActuales.dispensaciones.map(item => normalizarMedicamento(item.medicamento)));
+    }
+
+    function renderizarHistorialGeneral() {
+      if (!historialPermanente.length) {
+        listadoHistorial.innerHTML = '<div class="vacio">Todavía no hay medicamentos en el historial.</div>';
+        return;
+      }
+
+      const actuales = medicamentosActualesNormalizados();
+      const grupos = new Map();
+
+      for (const item of historialPermanente) {
+        const clave = normalizarMedicamento(item.medicamento);
+        if (!grupos.has(clave)) grupos.set(clave, []);
+        grupos.get(clave).push(item);
+      }
+
+      const medicamentos = [...grupos.values()].map(items => {
+        const ordenadas = [...items].sort((a, b) => String(b.fecha_activacion).localeCompare(String(a.fecha_activacion)));
+        const retiradas = ordenadas.filter(item => estaRetirada(item) && fechaRetirada(item));
+        retiradas.sort((a, b) => String(fechaRetirada(b)).localeCompare(String(fechaRetirada(a))));
+        return {
+          nombre: ordenadas[0].medicamento,
+          items: ordenadas,
+          activo: actuales.has(normalizarMedicamento(ordenadas[0].medicamento)),
+          ultimaDispensacion: retiradas.length ? fechaRetirada(retiradas[0]) : ""
+        };
+      }).sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+
+      listadoHistorial.innerHTML = medicamentos.map(grupo => `
+        <article class="medicamento" data-medicamento-historial="${encodeURIComponent(grupo.nombre)}">
+          <strong>${escaparHtml(grupo.nombre)}</strong>
+          <span class="etiqueta ${grupo.activo ? "" : "etiqueta-retirada"}">${grupo.activo ? "En tratamiento" : "Tratamiento finalizado"}</span>
+          <div class="fila-caducidad">${grupo.ultimaDispensacion
+            ? `Última dispensación: ${escaparHtml(fechaRetiradaBonita(grupo.ultimaDispensacion))}`
+            : "Sin dispensaciones registradas"}</div>
+        </article>
+      `).join("");
+    }
+
     function validarDatos(datos) {
       if (!datos || datos.formato !== "farmacia_baiona_dispensaciones") {
         throw new Error("El archivo no pertenece al formato de Farmacia Baiona.");
@@ -1472,6 +1567,7 @@
     }
 
     function guardarLocalmente(datos) {
+      fusionarConHistorial(datos);
       localStorage.setItem(CLAVE_DATOS, JSON.stringify(datos));
     }
 
@@ -1553,6 +1649,7 @@
         const datos = JSON.parse(guardado);
         validarDatos(datos);
         datosActuales = datos;
+        fusionarConHistorial(datos);
         mostrarDatos();
       } catch {
         localStorage.removeItem(CLAVE_DATOS);
@@ -1586,6 +1683,7 @@
       renderizarInicio();
       renderizarTodas();
       renderizarBusqueda();
+      renderizarHistorialGeneral();
     }
 
     function renderizarInicio() {
@@ -2093,14 +2191,21 @@
     function abrirDetalleMedicamento(nombreMedicamento, conservarPestana = false) {
       if (!datosActuales) return;
 
-      const dispensaciones = datosActuales.dispensaciones
-        .filter(item => item.medicamento === nombreMedicamento)
+      const desdeHistorial = vistaAnteriorDetalle === "historial";
+      const fuente = desdeHistorial ? historialPermanente : datosActuales.dispensaciones;
+      const claveNombre = normalizarMedicamento(nombreMedicamento);
+      const dispensaciones = fuente
+        .filter(item => normalizarMedicamento(item.medicamento) === claveNombre)
         .sort((a, b) => a.fecha_activacion.localeCompare(b.fecha_activacion));
 
       if (!dispensaciones.length) return;
 
       if (!conservarPestana || medicamentoDetalleActual !== nombreMedicamento) {
-        pestanaDetalleActual = "activas";
+        const tieneActivas = dispensaciones.some(item => {
+          const estado = estadoDispensacion(item);
+          return estado === "disponible" || estado === "pendiente";
+        });
+        pestanaDetalleActual = desdeHistorial && !tieneActivas ? "historico" : "activas";
       }
 
       const ultimaMarcada = dispensaciones.some(item => item.ultima);
@@ -2141,6 +2246,7 @@
       document.getElementById("vistaInicio").classList.add("oculto");
       document.getElementById("vistaTodas").classList.add("oculto");
       document.getElementById("vistaBuscar").classList.add("oculto");
+      vistaHistorial.classList.add("oculto");
       vistaDetalle.classList.remove("oculto");
 
       botonesNav.forEach(btn => btn.classList.remove("activo"));
@@ -2152,6 +2258,7 @@
       document.getElementById("vistaInicio").classList.toggle("oculto", nombre !== "inicio");
       document.getElementById("vistaTodas").classList.toggle("oculto", nombre !== "todas");
       document.getElementById("vistaBuscar").classList.toggle("oculto", nombre !== "buscar");
+      vistaHistorial.classList.toggle("oculto", nombre !== "historial");
       vistaDetalle.classList.add("oculto");
 
       botonesNav.forEach(btn => {
@@ -2189,7 +2296,16 @@
         renderizarInicio();
         renderizarTodas();
         renderizarBusqueda();
+        renderizarHistorialGeneral();
         abrirDetalleMedicamento(medicamentoDetalleActual || nombre, true);
+        return;
+      }
+
+      const tarjetaHistorial = evento.target.closest("[data-medicamento-historial]");
+      if (tarjetaHistorial) {
+        const nombreMedicamento = decodeURIComponent(tarjetaHistorial.dataset.medicamentoHistorial);
+        vistaAnteriorDetalle = "historial";
+        abrirDetalleMedicamento(nombreMedicamento);
         return;
       }
 
@@ -2285,6 +2401,8 @@
 
       localStorage.removeItem(CLAVE_DATOS);
       localStorage.removeItem(CLAVE_RETIRADAS);
+      localStorage.removeItem(CLAVE_HISTORIAL);
+      historialPermanente = [];
       dispensacionesRetiradas = new Map();
       datosActuales = null;
       busqueda.value = "";
@@ -2294,6 +2412,7 @@
       inicioSinDatos.classList.remove("oculto");
       listadoTodas.innerHTML = '<div class="vacio">Importa un archivo para ver las recetas.</div>';
       listadoBusqueda.innerHTML = '<div class="vacio">Escribe el nombre de un medicamento.</div>';
+      listadoHistorial.innerHTML = '<div class="vacio">Todavía no hay medicamentos en el historial.</div>';
       mostrarVista("inicio");
       cerrarAjustes();
     });
@@ -2324,6 +2443,7 @@
     }
 
     cargarRetiradas();
+    cargarHistorial();
     cargarLocalmente();
 
     window.addEventListener("pageshow", () => {
