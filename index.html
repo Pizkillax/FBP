@@ -405,14 +405,34 @@
       box-shadow: 0 18px 50px rgba(0,0,0,.24);
     }
 
+    .camara-visor {
+      position: relative;
+      margin-top: 12px;
+      overflow: hidden;
+      border-radius: 14px;
+      background: #111;
+    }
+
     .camara-video {
       display: block;
       width: 100%;
       max-height: 62vh;
-      margin-top: 12px;
       border-radius: 14px;
       background: #111;
       object-fit: cover;
+    }
+
+    .camara-marco {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: min(68%, 280px);
+      aspect-ratio: 1;
+      transform: translate(-50%, -50%);
+      border: 3px solid rgba(255,255,255,.95);
+      border-radius: 18px;
+      box-shadow: 0 0 0 999px rgba(0,0,0,.22);
+      pointer-events: none;
     }
 
     .camara-estado {
@@ -420,6 +440,12 @@
       color: var(--gris);
       font-size: .92rem;
       line-height: 1.4;
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .camara-estado.detectado {
+      color: var(--verde);
     }
 
     .camara-acciones {
@@ -958,8 +984,11 @@
         <h2 id="tituloCamara" class="ajustes-titulo">📷 Actualizar mediante QR</h2>
         <button id="cerrarCamaraBtn" class="cerrar-ajustes-btn" aria-label="Cerrar cámara">✕</button>
       </div>
-      <video id="camaraVideo" class="camara-video" autoplay muted playsinline></video>
-      <p id="camaraEstado" class="camara-estado">Enfoca el código QR de Farmacia Baiona.</p>
+      <div class="camara-visor">
+        <video id="camaraVideo" class="camara-video" autoplay muted playsinline></video>
+        <div class="camara-marco" aria-hidden="true"></div>
+      </div>
+      <p id="camaraEstado" class="camara-estado">🔍 Buscando código QR…</p>
       <div class="camara-acciones">
         <button id="cerrarCamaraInferiorBtn" class="secundario">Cerrar</button>
       </div>
@@ -1223,8 +1252,12 @@
           } else {
             procesandoQrCamara = true;
             detenerCamara();
+            camaraEstado.textContent = "✅ Código detectado";
+            camaraEstado.classList.add("detectado");
+            await new Promise(resolve => setTimeout(resolve, 300));
             modalCamara.classList.add("oculto");
             document.body.style.overflow = "";
+            camaraEstado.classList.remove("detectado");
             await procesarPayloadFbp(payload);
             return;
           }
@@ -1238,6 +1271,7 @@
       cerrarAjustes();
       modalCamara.classList.remove("oculto");
       document.body.style.overflow = "hidden";
+      camaraEstado.classList.remove("detectado");
       camaraEstado.textContent = "Solicitando permiso para usar la cámara…";
 
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -1262,7 +1296,7 @@
         });
         camaraVideo.srcObject = flujoCamara;
         await camaraVideo.play();
-        camaraEstado.textContent = "Enfoca el código QR de Farmacia Baiona.";
+        camaraEstado.textContent = "🔍 Buscando código QR…";
         animacionCamara = requestAnimationFrame(leerQrDeCamara);
       } catch (error) {
         detenerCamara();
