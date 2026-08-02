@@ -1432,8 +1432,20 @@
     function claveDispensacion(item) {
       return JSON.stringify([
         normalizarMedicamento(item.medicamento),
+        String(item.fecha_activacion || "").trim(),
+        String(item.fecha_caducidad || "").trim()
+      ]);
+    }
+
+    function claveDispensacionAnterior(item) {
+      return JSON.stringify([
+        normalizarMedicamento(item.medicamento),
         String(item.fecha_activacion || "").trim()
       ]);
+    }
+
+    function retiradaConfirmadaSergas(item) {
+      return item?.recogida_sergas === true;
     }
 
     function cargarRetiradas() {
@@ -1472,11 +1484,17 @@
     }
 
     function estaRetirada(item) {
-      return dispensacionesRetiradas.has(claveDispensacion(item));
+      if (retiradaConfirmadaSergas(item)) return true;
+      return dispensacionesRetiradas.has(claveDispensacion(item)) ||
+        dispensacionesRetiradas.has(claveDispensacionAnterior(item));
     }
 
     function fechaRetirada(item) {
-      return dispensacionesRetiradas.get(claveDispensacion(item)) || "";
+      if (retiradaConfirmadaSergas(item)) {
+        return String(item.fecha_retirada_sergas || item.fecha_activacion || "").trim();
+      }
+      return dispensacionesRetiradas.get(claveDispensacion(item)) ||
+        dispensacionesRetiradas.get(claveDispensacionAnterior(item)) || "";
     }
 
     function estadoDispensacion(item) {
@@ -1500,8 +1518,11 @@
     }
 
     function deshacerRetirada(item) {
+      if (retiradaConfirmadaSergas(item)) return false;
       dispensacionesRetiradas.delete(claveDispensacion(item));
+      dispensacionesRetiradas.delete(claveDispensacionAnterior(item));
       guardarRetiradas();
+      return true;
     }
 
     function cargarHistorial() {
@@ -1861,7 +1882,7 @@
             <strong>${escaparHtml(item.medicamento)}</strong>
             ${etiquetaEstado}
             ${estado === "retirada" && fechaRetirada(item)
-              ? `<div class="fila-caducidad">Marcada como retirada el ${escaparHtml(fechaRetiradaBonita(fechaRetirada(item)))}</div>`
+              ? `<div class="fila-caducidad">${retiradaConfirmadaSergas(item) ? "Retirada confirmada por SERGAS el " : "Marcada como retirada el "}${escaparHtml(fechaRetiradaBonita(fechaRetirada(item)))}</div>`
               : ""}
             ${item.ultima ? '<span class="etiqueta">Última dispensación</span>' : ""}
           </article>`;
@@ -1951,13 +1972,19 @@
           accion = `<button class="primario accion-dispensacion"
             data-accion-dispensacion="retirar"
             data-fecha="${escaparHtml(item.fecha_activacion)}"
+            data-caducidad="${escaparHtml(item.fecha_caducidad || "")}"
             data-nombre="${encodeURIComponent(item.medicamento)}">✓ Marcar como retirado</button>`;
         } else if (estado === "retirada") {
-          etiqueta = '<span class="etiqueta etiqueta-retirada">✓ Retirada</span>';
-          accion = `<button class="accion-dispensacion accion-secundaria"
-            data-accion-dispensacion="deshacer"
-            data-fecha="${escaparHtml(item.fecha_activacion)}"
-            data-nombre="${encodeURIComponent(item.medicamento)}">↩ Deshacer retirada</button>`;
+          etiqueta = retiradaConfirmadaSergas(item)
+            ? '<span class="etiqueta etiqueta-retirada">✓ Retirada · SERGAS</span>'
+            : '<span class="etiqueta etiqueta-retirada">✓ Retirada</span>';
+          if (!retiradaConfirmadaSergas(item)) {
+            accion = `<button class="accion-dispensacion accion-secundaria"
+              data-accion-dispensacion="deshacer"
+              data-fecha="${escaparHtml(item.fecha_activacion)}"
+              data-caducidad="${escaparHtml(item.fecha_caducidad || "")}"
+              data-nombre="${encodeURIComponent(item.medicamento)}">↩ Deshacer retirada</button>`;
+          }
         } else if (estado === "caducada") {
           etiqueta = '<span class="etiqueta etiqueta-caducada">Caducada</span>';
         }
@@ -1974,7 +2001,7 @@
               : ""}
             <div class="fila-dispensacion-estado">${etiqueta}</div>
             ${estado === "retirada" && fechaRetirada(item)
-              ? `<div class="fila-caducidad">Marcada como retirada el ${escaparHtml(fechaRetiradaBonita(fechaRetirada(item)))}</div>`
+              ? `<div class="fila-caducidad">${retiradaConfirmadaSergas(item) ? "Retirada confirmada por SERGAS el " : "Marcada como retirada el "}${escaparHtml(fechaRetiradaBonita(fechaRetirada(item)))}</div>`
               : ""}
           </div>
           ${accion}
@@ -2277,7 +2304,9 @@
         <div class="fila-dispensacion retirada">
           <div class="fila-dispensacion-contenido">
             <div class="fila-fecha">Fecha de activación: ${escaparHtml(fechaBonita(item.fecha_activacion))}</div>
-            <div class="fila-caducidad">Retirada registrada el ${escaparHtml(fechaRetiradaBonita(fechaRetirada(item)))}</div>
+            <div class="fila-caducidad">${retiradaConfirmadaSergas(item)
+              ? "Retirada confirmada por SERGAS el "
+              : "Retirada registrada el "}${escaparHtml(fechaRetiradaBonita(fechaRetirada(item)))}</div>
           </div>
         </div>
       `).join("");
@@ -2384,7 +2413,8 @@
       if (botonAccion) {
         const nombre = decodeURIComponent(botonAccion.dataset.nombre);
         const fecha = botonAccion.dataset.fecha;
-        const item = { medicamento: nombre, fecha_activacion: fecha };
+        const caducidad = botonAccion.dataset.caducidad || "";
+        const item = { medicamento: nombre, fecha_activacion: fecha, fecha_caducidad: caducidad };
         const accion = botonAccion.dataset.accionDispensacion;
 
         if (accion === "retirar") {
