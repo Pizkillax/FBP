@@ -1017,6 +1017,25 @@
       </section>
     </section>
 
+    <section id="vistaDetalleHistorial" class="oculto">
+      <section class="panel">
+        <div class="detalle-cabecera">
+          <button id="volverDetalleHistorialBtn" class="volver-btn">← Volver</button>
+          <h2 id="detalleHistorialNombre" class="detalle-titulo"></h2>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2 class="fecha-titulo">Estado</h2>
+        <div id="detalleHistorialEstado"></div>
+      </section>
+
+      <section class="panel">
+        <h2 class="fecha-titulo">Historial de dispensaciones</h2>
+        <div id="detalleHistorialFechas"></div>
+      </section>
+    </section>
+
     <section id="vistaDetalle" class="oculto">
       <section class="panel">
         <div class="detalle-cabecera">
@@ -1131,6 +1150,11 @@
     const listadoHistorial = document.getElementById("listadoHistorial");
     const vistaHistorial = document.getElementById("vistaHistorial");
     const vistaDetalle = document.getElementById("vistaDetalle");
+    const vistaDetalleHistorial = document.getElementById("vistaDetalleHistorial");
+    const volverDetalleHistorialBtn = document.getElementById("volverDetalleHistorialBtn");
+    const detalleHistorialNombre = document.getElementById("detalleHistorialNombre");
+    const detalleHistorialEstado = document.getElementById("detalleHistorialEstado");
+    const detalleHistorialFechas = document.getElementById("detalleHistorialFechas");
     const volverDetalleBtn = document.getElementById("volverDetalleBtn");
     const detalleNombre = document.getElementById("detalleNombre");
     const detalleNumero = document.getElementById("detalleNumero");
@@ -2084,7 +2108,7 @@
       const alt = tipo === "envase" ? "Fotografía del envase" : "Fotografía de la forma farmacéutica";
       cimaFotos.innerHTML = crearTarjetaFotoCima(foto, tipo, titulo, alt);
       cimaFotos.classList.remove("oculto");
-      cimaEstado.textContent = "Imagen oficial facilitada por CIMA.";
+      cimaEstado.textContent = "";
 
       const imagen = cimaFotos.querySelector("img");
       if (imagen) {
@@ -2195,6 +2219,38 @@
       if (evento.key === "Escape" && !cimaVisor.classList.contains("oculto")) cerrarVisorCima();
     });
 
+    function abrirDetalleHistorial(nombreMedicamento) {
+      const claveNombre = normalizarMedicamento(nombreMedicamento);
+      const dispensaciones = historialPermanente
+        .filter(item => normalizarMedicamento(item.medicamento) === claveNombre)
+        .filter(item => estaRetirada(item) && fechaRetirada(item))
+        .sort((a, b) => String(b.fecha_activacion).localeCompare(String(a.fecha_activacion)));
+
+      if (!dispensaciones.length) return;
+
+      const activo = medicamentosActualesNormalizados().has(claveNombre);
+      detalleHistorialNombre.textContent = nombreMedicamento;
+      detalleHistorialEstado.innerHTML = `<span class="etiqueta ${activo ? "" : "etiqueta-retirada"}">${activo ? "En tratamiento" : "Tratamiento finalizado"}</span>`;
+      detalleHistorialFechas.innerHTML = dispensaciones.map(item => `
+        <div class="fila-dispensacion retirada">
+          <div class="fila-dispensacion-contenido">
+            <div class="fila-fecha">Fecha de activación: ${escaparHtml(fechaBonita(item.fecha_activacion))}</div>
+            <div class="fila-caducidad">El paciente la marcó como retirada el ${escaparHtml(fechaRetiradaBonita(fechaRetirada(item)))}</div>
+          </div>
+        </div>
+      `).join("");
+
+      document.getElementById("vistaInicio").classList.add("oculto");
+      document.getElementById("vistaTodas").classList.add("oculto");
+      document.getElementById("vistaBuscar").classList.add("oculto");
+      vistaHistorial.classList.add("oculto");
+      vistaDetalle.classList.add("oculto");
+      vistaDetalleHistorial.classList.remove("oculto");
+
+      botonesNav.forEach(btn => btn.classList.remove("activo"));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
     function abrirDetalleMedicamento(nombreMedicamento, conservarPestana = false, abrirEnHistorico = false) {
       if (!datosActuales) return;
 
@@ -2269,6 +2325,7 @@
       document.getElementById("vistaBuscar").classList.toggle("oculto", nombre !== "buscar");
       vistaHistorial.classList.toggle("oculto", nombre !== "historial");
       vistaDetalle.classList.add("oculto");
+      vistaDetalleHistorial.classList.add("oculto");
 
       botonesNav.forEach(btn => {
         btn.classList.toggle("activo", btn.dataset.vista === nombre);
@@ -2313,8 +2370,7 @@
       const tarjetaHistorial = evento.target.closest("[data-medicamento-historial]");
       if (tarjetaHistorial) {
         const nombreMedicamento = decodeURIComponent(tarjetaHistorial.dataset.medicamentoHistorial);
-        vistaAnteriorDetalle = "historial";
-        abrirDetalleMedicamento(nombreMedicamento, false, true);
+        abrirDetalleHistorial(nombreMedicamento);
         return;
       }
 
@@ -2350,6 +2406,7 @@
       renderizarDispensacionesDetalle();
     });
 
+    volverDetalleHistorialBtn.addEventListener("click", () => mostrarVista("historial"));
     volverDetalleBtn.addEventListener("click", () => mostrarVista(vistaAnteriorDetalle));
 
     abrirAjustesBtn.addEventListener("click", abrirAjustes);
