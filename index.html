@@ -1534,9 +1534,16 @@
           nombre: ordenadas[0].medicamento,
           items: ordenadas,
           activo: actuales.has(normalizarMedicamento(ordenadas[0].medicamento)),
+          numeroDispensaciones: retiradas.length,
           ultimaDispensacion: retiradas.length ? fechaRetirada(retiradas[0]) : ""
         };
-      }).sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+      }).filter(grupo => grupo.numeroDispensaciones > 0)
+        .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+
+      if (!medicamentos.length) {
+        listadoHistorial.innerHTML = '<div class="vacio">Aún no hay dispensaciones en el historial.</div>';
+        return;
+      }
 
       listadoHistorial.innerHTML = medicamentos.map(grupo => `
         <article class="medicamento" data-medicamento-historial="${encodeURIComponent(grupo.nombre)}">
@@ -2188,7 +2195,7 @@
       if (evento.key === "Escape" && !cimaVisor.classList.contains("oculto")) cerrarVisorCima();
     });
 
-    function abrirDetalleMedicamento(nombreMedicamento, conservarPestana = false) {
+    function abrirDetalleMedicamento(nombreMedicamento, conservarPestana = false, abrirEnHistorico = false) {
       if (!datosActuales) return;
 
       const desdeHistorial = vistaAnteriorDetalle === "historial";
@@ -2200,7 +2207,9 @@
 
       if (!dispensaciones.length) return;
 
-      if (!conservarPestana || medicamentoDetalleActual !== nombreMedicamento) {
+      if (abrirEnHistorico) {
+        pestanaDetalleActual = "historico";
+      } else if (!conservarPestana || medicamentoDetalleActual !== nombreMedicamento) {
         const tieneActivas = dispensaciones.some(item => {
           const estado = estadoDispensacion(item);
           return estado === "disponible" || estado === "pendiente";
@@ -2305,7 +2314,7 @@
       if (tarjetaHistorial) {
         const nombreMedicamento = decodeURIComponent(tarjetaHistorial.dataset.medicamentoHistorial);
         vistaAnteriorDetalle = "historial";
-        abrirDetalleMedicamento(nombreMedicamento);
+        abrirDetalleMedicamento(nombreMedicamento, false, true);
         return;
       }
 
