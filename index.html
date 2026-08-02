@@ -2087,7 +2087,7 @@
       activarBotonCima(tipo);
 
       if (!resultadoCimaActual) {
-        cimaEstado.textContent = "Consultando CIMA…";
+        cimaEstado.textContent = "";
         cimaFotos.innerHTML = "";
         cimaFotos.classList.add("oculto");
         consultarCimaSiHaceFalta();
@@ -2235,7 +2235,7 @@
         <div class="fila-dispensacion retirada">
           <div class="fila-dispensacion-contenido">
             <div class="fila-fecha">Fecha de activación: ${escaparHtml(fechaBonita(item.fecha_activacion))}</div>
-            <div class="fila-caducidad">El paciente la marcó como retirada el ${escaparHtml(fechaRetiradaBonita(fechaRetirada(item)))}</div>
+            <div class="fila-caducidad">Retirada registrada el ${escaparHtml(fechaRetiradaBonita(fechaRetirada(item)))}</div>
           </div>
         </div>
       `).join("");
