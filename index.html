@@ -1659,9 +1659,25 @@
       }
     }
 
+    function separarRetiradasSergas(datos) {
+      const dispensaciones = Array.isArray(datos?.dispensaciones)
+        ? datos.dispensaciones
+        : [];
+
+      return {
+        datosActivos: {
+          ...datos,
+          dispensaciones: dispensaciones.filter(item => !retiradaConfirmadaSergas(item))
+        },
+        retiradasSergas: dispensaciones.filter(item => retiradaConfirmadaSergas(item))
+      };
+    }
+
     function guardarLocalmente(datos) {
       fusionarConHistorial(datos);
-      localStorage.setItem(CLAVE_DATOS, JSON.stringify(datos));
+      const { datosActivos } = separarRetiradasSergas(datos);
+      localStorage.setItem(CLAVE_DATOS, JSON.stringify(datosActivos));
+      return datosActivos;
     }
 
     async function decodificarDatosFbp(payload) {
@@ -1705,10 +1721,13 @@
         validarPacienteParaImportacion(datos);
 
         const nombre = obtenerNombrePaciente(datos);
-        const numero = datos.dispensaciones.length;
+        const { datosActivos, retiradasSergas } = separarRetiradasSergas(datos);
         const confirmado = confirm(
           `¿Quieres actualizar las próximas dispensaciones de ${nombre}?\n\n` +
-          `${numero} dispensaciones.`
+          `${datosActivos.dispensaciones.length} próximas dispensaciones` +
+          (retiradasSergas.length
+            ? ` y ${retiradasSergas.length} retiradas confirmadas por SERGAS que se añadirán al historial.`
+            : ".")
         );
 
         if (!confirmado) {
@@ -1716,8 +1735,7 @@
           return;
         }
 
-        datosActuales = datos;
-        guardarLocalmente(datos);
+        datosActuales = guardarLocalmente(datos);
         busqueda.value = "";
         mostrarDatos();
         mostrarVista("inicio");
@@ -1742,8 +1760,10 @@
       try {
         const datos = JSON.parse(guardado);
         validarDatos(datos);
-        datosActuales = datos;
         fusionarConHistorial(datos);
+        const { datosActivos } = separarRetiradasSergas(datos);
+        datosActuales = datosActivos;
+        localStorage.setItem(CLAVE_DATOS, JSON.stringify(datosActivos));
         mostrarDatos();
       } catch {
         localStorage.removeItem(CLAVE_DATOS);
@@ -2515,8 +2535,7 @@
         const datos = JSON.parse(texto);
         validarDatos(datos);
         validarPacienteParaImportacion(datos);
-        datosActuales = datos;
-        guardarLocalmente(datos);
+        datosActuales = guardarLocalmente(datos);
         busqueda.value = "";
         mostrarDatos();
         mostrarVista("inicio");
