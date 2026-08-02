@@ -397,6 +397,37 @@
       color: var(--texto);
     }
 
+    .modal-camara {
+      width: min(100%, 520px);
+      background: var(--blanco);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 18px 50px rgba(0,0,0,.24);
+    }
+
+    .camara-video {
+      display: block;
+      width: 100%;
+      max-height: 62vh;
+      margin-top: 12px;
+      border-radius: 14px;
+      background: #111;
+      object-fit: cover;
+    }
+
+    .camara-estado {
+      margin: 12px 0 0;
+      color: var(--gris);
+      font-size: .92rem;
+      line-height: 1.4;
+    }
+
+    .camara-acciones {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 14px;
+    }
+
     .aviso {
       border-left: 4px solid var(--verde);
       background: var(--verde-claro);
@@ -900,6 +931,7 @@
 
       <div class="ajustes-opciones">
         <label class="boton-archivo" for="archivoJson">📂 Importar archivo JSON</label>
+        <button id="probarCamaraBtn" class="secundario">📷 Probar cámara</button>
         <button id="instalarBtn" class="secundario oculto">📱 Instalar aplicación</button>
         <button id="borrarBtn" class="peligro oculto">🗑️ Borrar datos del teléfono</button>
       </div>
@@ -916,6 +948,20 @@
         Los datos se almacenan únicamente en este dispositivo y no se envían a ningún servidor.
 
         <div class="ajustes-version">© 2026 Farmacia Baiona</div>
+      </div>
+    </section>
+  </div>
+
+  <div id="modalCamara" class="modal-fondo oculto" role="dialog" aria-modal="true" aria-labelledby="tituloCamara">
+    <section class="modal-camara">
+      <div class="ajustes-cabecera">
+        <h2 id="tituloCamara" class="ajustes-titulo">📷 Prueba de cámara</h2>
+        <button id="cerrarCamaraBtn" class="cerrar-ajustes-btn" aria-label="Cerrar cámara">✕</button>
+      </div>
+      <video id="camaraVideo" class="camara-video" autoplay muted playsinline></video>
+      <p id="camaraEstado" class="camara-estado">Preparando la cámara…</p>
+      <div class="camara-acciones">
+        <button id="cerrarCamaraInferiorBtn" class="secundario">Cerrar</button>
       </div>
     </section>
   </div>
@@ -1042,6 +1088,13 @@
     const modalAjustes = document.getElementById("modalAjustes");
     const instalarBtn = document.getElementById("instalarBtn");
     const borrarBtn = document.getElementById("borrarBtn");
+    const probarCamaraBtn = document.getElementById("probarCamaraBtn");
+    const modalCamara = document.getElementById("modalCamara");
+    const camaraVideo = document.getElementById("camaraVideo");
+    const camaraEstado = document.getElementById("camaraEstado");
+    const cerrarCamaraBtn = document.getElementById("cerrarCamaraBtn");
+    const cerrarCamaraInferiorBtn = document.getElementById("cerrarCamaraInferiorBtn");
+    let flujoCamara = null;
     const datosPaciente = document.getElementById("datosPaciente");
     const nombrePaciente = document.getElementById("nombrePaciente");
     const fechaGeneracion = document.getElementById("fechaGeneracion");
@@ -1104,6 +1157,56 @@
     function cerrarAjustes() {
       modalAjustes.classList.add("oculto");
       document.body.style.overflow = "";
+    }
+
+    function detenerCamara() {
+      if (flujoCamara) {
+        flujoCamara.getTracks().forEach(track => track.stop());
+        flujoCamara = null;
+      }
+      camaraVideo.srcObject = null;
+    }
+
+    function cerrarCamara() {
+      detenerCamara();
+      modalCamara.classList.add("oculto");
+      document.body.style.overflow = "";
+    }
+
+    async function abrirCamara() {
+      cerrarAjustes();
+      modalCamara.classList.remove("oculto");
+      document.body.style.overflow = "hidden";
+      camaraEstado.textContent = "Solicitando permiso para usar la cámara…";
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        camaraEstado.textContent = "Este dispositivo o navegador no permite abrir la cámara desde FBP.";
+        return;
+      }
+
+      try {
+        detenerCamara();
+        flujoCamara = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        });
+        camaraVideo.srcObject = flujoCamara;
+        await camaraVideo.play();
+        camaraEstado.textContent = "Cámara abierta correctamente. Esta pantalla es solo una prueba; todavía no lee códigos QR.";
+      } catch (error) {
+        detenerCamara();
+        if (error && (error.name === "NotAllowedError" || error.name === "SecurityError")) {
+          camaraEstado.textContent = "No se concedió permiso para usar la cámara. Puedes revisarlo en los ajustes del teléfono.";
+        } else if (error && error.name === "NotFoundError") {
+          camaraEstado.textContent = "No se encontró ninguna cámara disponible.";
+        } else {
+          camaraEstado.textContent = `No se pudo abrir la cámara: ${error?.message || "error desconocido"}`;
+        }
+      }
     }
 
     function escaparHtml(texto) {
@@ -2048,12 +2151,24 @@
 
     abrirAjustesBtn.addEventListener("click", abrirAjustes);
     cerrarAjustesBtn.addEventListener("click", cerrarAjustes);
+    probarCamaraBtn.addEventListener("click", abrirCamara);
+    cerrarCamaraBtn.addEventListener("click", cerrarCamara);
+    cerrarCamaraInferiorBtn.addEventListener("click", cerrarCamara);
+
 
     modalAjustes.addEventListener("click", evento => {
       if (evento.target === modalAjustes) cerrarAjustes();
     });
 
+    modalCamara.addEventListener("click", evento => {
+      if (evento.target === modalCamara) cerrarCamara();
+    });
+
     document.addEventListener("keydown", evento => {
+      if (evento.key === "Escape" && !modalCamara.classList.contains("oculto")) {
+        cerrarCamara();
+        return;
+      }
       if (evento.key === "Escape" && !modalAjustes.classList.contains("oculto")) {
         cerrarAjustes();
       }
@@ -2118,6 +2233,12 @@
       eventoInstalacion = null;
       instalarBtn.classList.add("oculto");
       cerrarAjustes();
+    });
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden && !modalCamara.classList.contains("oculto")) {
+        cerrarCamara();
+      }
     });
 
     if ("serviceWorker" in navigator) {
