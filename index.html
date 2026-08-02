@@ -1098,6 +1098,8 @@
     let flujoCamara = null;
     let animacionCamara = null;
     let procesandoQrCamara = false;
+    let ultimoAnalisisQr = 0;
+    const INTERVALO_ANALISIS_QR = 100;
     const lienzoQr = document.createElement("canvas");
     const contextoQr = lienzoQr.getContext("2d", { willReadFrequently: true });
     const datosPaciente = document.getElementById("datosPaciente");
@@ -1199,13 +1201,19 @@
       return "";
     }
 
-    async function leerQrDeCamara() {
+    async function leerQrDeCamara(marcaTiempo = 0) {
       if (!flujoCamara || procesandoQrCamara) return;
+
+      if (marcaTiempo - ultimoAnalisisQr < INTERVALO_ANALISIS_QR) {
+        animacionCamara = requestAnimationFrame(leerQrDeCamara);
+        return;
+      }
+      ultimoAnalisisQr = marcaTiempo;
 
       if (camaraVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
           camaraVideo.videoWidth && camaraVideo.videoHeight &&
           typeof jsQR === "function") {
-        const anchoMaximo = 900;
+        const anchoMaximo = 640;
         const escala = Math.min(1, anchoMaximo / camaraVideo.videoWidth);
         lienzoQr.width = Math.round(camaraVideo.videoWidth * escala);
         lienzoQr.height = Math.round(camaraVideo.videoHeight * escala);
