@@ -1403,6 +1403,20 @@
       return Math.round((fin - inicio) / 86400000);
     }
 
+    function obtenerNombrePaciente(datos) {
+      const paciente = datos?.paciente;
+      if (paciente && typeof paciente === "object") {
+        return String(paciente.nombre || "").trim() || "Paciente";
+      }
+      return String(paciente || "").trim() || "Paciente";
+    }
+
+    function obtenerCipPaciente(datos) {
+      const paciente = datos?.paciente;
+      if (!paciente || typeof paciente !== "object") return "";
+      return String(paciente.cip || "").trim().toLocaleUpperCase("es-ES");
+    }
+
     function primerNombre(nombreCompleto) {
       const limpio = String(nombreCompleto || "").trim();
       return limpio ? limpio.split(/\s+/)[0] : "Paciente";
@@ -1597,6 +1611,33 @@
       }
     }
 
+    function validarPacienteParaImportacion(datos) {
+      const cipNuevo = obtenerCipPaciente(datos);
+      if (!cipNuevo) {
+        throw new Error(
+          "El archivo no contiene el CIP del paciente. Genera de nuevo los datos desde Farmacia Baiona."
+        );
+      }
+
+      if (!datosActuales) return;
+
+      const cipActual = obtenerCipPaciente(datosActuales);
+      if (!cipActual) {
+        throw new Error(
+          "Los datos guardados en este dispositivo pertenecen a una versión anterior sin CIP. " +
+          "Para evitar mezclar pacientes, bórralos antes de importar este listado."
+        );
+      }
+
+      if (cipActual !== cipNuevo) {
+        throw new Error(
+          `Este dispositivo contiene los datos de ${obtenerNombrePaciente(datosActuales)}. ` +
+          `El listado que intentas importar pertenece a ${obtenerNombrePaciente(datos)}. ` +
+          "No se ha realizado la actualización."
+        );
+      }
+    }
+
     function guardarLocalmente(datos) {
       fusionarConHistorial(datos);
       localStorage.setItem(CLAVE_DATOS, JSON.stringify(datos));
@@ -1640,8 +1681,9 @@
       try {
         const datos = await decodificarDatosFbp(payload);
         validarDatos(datos);
+        validarPacienteParaImportacion(datos);
 
-        const nombre = datos.paciente || "Paciente";
+        const nombre = obtenerNombrePaciente(datos);
         const numero = datos.dispensaciones.length;
         const confirmado = confirm(
           `¿Quieres actualizar las próximas dispensaciones de ${nombre}?\n\n` +
@@ -1690,7 +1732,7 @@
     function mostrarDatos() {
       if (!datosActuales) return;
 
-      nombrePaciente.textContent = datosActuales.paciente || "Paciente";
+      nombrePaciente.textContent = obtenerNombrePaciente(datosActuales);
       const generado = datosActuales.generado_el
         ? new Date(datosActuales.generado_el)
         : null;
@@ -1705,7 +1747,7 @@
       fechaGeneracion.textContent =
         `Actualizado el ${generadoTexto} · ${datosActuales.dispensaciones.length} dispensaciones`;
 
-      saludoPaciente.textContent = `Hola, ${primerNombre(datosActuales.paciente)}.`;
+      saludoPaciente.textContent = `Hola, ${primerNombre(obtenerNombrePaciente(datosActuales))}.`;
       datosPaciente.classList.remove("oculto");
       borrarBtn.classList.remove("oculto");
       inicioSinDatos.classList.add("oculto");
@@ -2442,6 +2484,7 @@
         const texto = await archivo.text();
         const datos = JSON.parse(texto);
         validarDatos(datos);
+        validarPacienteParaImportacion(datos);
         datosActuales = datos;
         guardarLocalmente(datos);
         busqueda.value = "";
