@@ -387,8 +387,8 @@
 
     .ajustes-info {
       color: var(--gris);
-      font-size: .9rem;
-      line-height: 1.45;
+      font-size: .82rem;
+      line-height: 1.4;
     }
 
     .ajustes-version {
@@ -965,10 +965,11 @@
       </div>
 
       <div class="ajustes-opciones">
-        <label class="boton-archivo" for="archivoJson">📂 Importar archivo JSON</label>
-        <button id="probarCamaraBtn" class="secundario">📷 Actualizar mediante QR</button>
+        <button id="probarCamaraBtn" class="primario">📷 Actualizar mediante QR</button>
+        <label class="boton-archivo secundario" for="archivoJson">📂 Importar desde archivo</label>
         <button id="instalarBtn" class="secundario oculto">📱 Instalar aplicación</button>
         <button id="cambiarPacienteBtn" class="secundario oculto">👥 Cambiar paciente</button>
+        <button id="sugerenciasBtn" class="secundario">💬 Sugerencias y dudas</button>
         <button id="borrarBtn" class="peligro oculto">🗑️ Eliminar perfil</button>
       </div>
 
@@ -977,7 +978,7 @@
       <div class="ajustes-info">
         <strong>FBP</strong><br>
         Farmacia Baiona Pacientes
-        <div class="ajustes-version">Versión 1.1.0 desarrollo</div>
+        <div class="ajustes-version">Versión 2.0.0</div>
 
         <hr class="ajustes-separador">
 
@@ -1168,6 +1169,7 @@
     const modalAjustes = document.getElementById("modalAjustes");
     const instalarBtn = document.getElementById("instalarBtn");
     const cambiarPacienteBtn = document.getElementById("cambiarPacienteBtn");
+    const sugerenciasBtn = document.getElementById("sugerenciasBtn");
     const borrarBtn = document.getElementById("borrarBtn");
     const probarCamaraBtn = document.getElementById("probarCamaraBtn");
     const modalCamara = document.getElementById("modalCamara");
@@ -2473,7 +2475,7 @@
           promesaCimaActual = null;
           cimaEstado.textContent = navigator.onLine
             ? "No se ha podido consultar CIMA en este momento."
-            : "Sin conexión: las imágenes de CIMA no están disponibles.";
+            : "Sin conexión: las imágenes no están disponibles.";
         }
       })();
 
@@ -2724,6 +2726,11 @@
     cambiarPacienteBtn.addEventListener("click", () => {
       cerrarAjustes();
       mostrarSelectorPacientes();
+    });
+    sugerenciasBtn.addEventListener("click", () => {
+      const asunto = encodeURIComponent("FBP – Sugerencia o duda");
+      const cuerpo = encodeURIComponent("Versión: 2.0.0\n\nEscribe aquí tu sugerencia o consulta.");
+      window.location.href = `mailto:farmaciabaina@gmail.com?subject=${asunto}&body=${cuerpo}`;
     });
     cerrarCamaraBtn.addEventListener("click", cerrarCamara);
     cerrarCamaraInferiorBtn.addEventListener("click", cerrarCamara);
