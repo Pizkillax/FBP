@@ -1163,7 +1163,7 @@
     <button class="nav-btn" data-vista="historial"><span>📖</span>Historial</button>
   </nav>
 
-  <script src="https://cdn.jsdelivr.net/npm/farmaciabaiona@gmail.com/dist/jsQR.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
   <script>
     const CLAVE_DATOS = "farmacia_baiona_datos_v1";
     const CLAVE_RETIRADAS = "farmacia_baiona_retiradas_v1";
@@ -2764,7 +2764,9 @@
     sugerenciasBtn.addEventListener("click", () => {
       const asunto = encodeURIComponent("FBP – Sugerencia o duda");
       const cuerpo = encodeURIComponent("Versión: 2.0.0\n\nEscribe aquí tu sugerencia o consulta.");
-      window.location.href = `mailto:farmaciabaiona@gmail.com"click", cerrarCamara);
+      window.location.href = `mailto:farmaciabaiona@gmail.com?subject=${asunto}&body=${cuerpo}`;
+    });
+    cerrarCamaraBtn.addEventListener("click", cerrarCamara);
     cerrarCamaraInferiorBtn.addEventListener("click", cerrarCamara);
 
 
