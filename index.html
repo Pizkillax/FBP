@@ -965,8 +965,7 @@
       </div>
 
       <div class="ajustes-opciones">
-        <button id="probarCamaraBtn" class="primario">📷 Actualizar mediante QR</button>
-        <label class="boton-archivo secundario" for="archivoJson">📂 Importar desde archivo</label>
+        <button id="actualizarDatosBtn" class="primario">🔄 Actualizar datos</button>
         <button id="instalarBtn" class="secundario oculto">📱 Instalar aplicación</button>
         <button id="cambiarPacienteBtn" class="secundario oculto">👥 Cambiar paciente</button>
         <button id="sugerenciasBtn" class="secundario">💬 Sugerencias y dudas</button>
@@ -985,6 +984,20 @@
         Los datos se almacenan únicamente en este dispositivo y no se envían a ningún servidor.
 
         <div class="ajustes-version">© 2026 Farmacia Baiona</div>
+      </div>
+    </section>
+  </div>
+
+  <div id="modalActualizar" class="modal-fondo oculto" role="dialog" aria-modal="true" aria-labelledby="tituloActualizar">
+    <section class="modal-ajustes">
+      <div class="ajustes-cabecera">
+        <h2 id="tituloActualizar" class="ajustes-titulo">🔄 Actualizar datos</h2>
+        <button id="cerrarActualizarBtn" class="cerrar-ajustes-btn" aria-label="Cerrar actualización">✕</button>
+      </div>
+
+      <div class="ajustes-opciones">
+        <button id="probarCamaraBtn" class="primario">📷 Escanear un QR</button>
+        <label class="boton-archivo secundario" for="archivoJson">📂 Seleccionar un archivo</label>
       </div>
     </section>
   </div>
@@ -1010,8 +1023,8 @@
         <h2 class="fecha-titulo">Pacientes</h2>
         <div id="listaPacientes" class="pacientes-lista"></div>
         <div class="pacientes-acciones">
-          <label class="boton-archivo" for="archivoJson">📂 Añadir mediante archivo JSON</label>
-          <button id="anadirPacienteQrBtn" class="secundario">📷 Añadir mediante QR</button>
+          <button id="anadirPacienteQrBtn" class="primario">📷 Nuevo paciente mediante QR</button>
+          <label class="boton-archivo secundario" for="archivoJson">📂 Nuevo paciente desde archivo</label>
         </div>
       </section>
     </section>
@@ -1167,12 +1180,16 @@
     const abrirAjustesBtn = document.getElementById("abrirAjustesBtn");
     const cerrarAjustesBtn = document.getElementById("cerrarAjustesBtn");
     const modalAjustes = document.getElementById("modalAjustes");
+    const actualizarDatosBtn = document.getElementById("actualizarDatosBtn");
+    const modalActualizar = document.getElementById("modalActualizar");
+    const cerrarActualizarBtn = document.getElementById("cerrarActualizarBtn");
     const instalarBtn = document.getElementById("instalarBtn");
     const cambiarPacienteBtn = document.getElementById("cambiarPacienteBtn");
     const sugerenciasBtn = document.getElementById("sugerenciasBtn");
     const borrarBtn = document.getElementById("borrarBtn");
     const probarCamaraBtn = document.getElementById("probarCamaraBtn");
     const modalCamara = document.getElementById("modalCamara");
+    const tituloCamara = document.getElementById("tituloCamara");
     const camaraVideo = document.getElementById("camaraVideo");
     const camaraEstado = document.getElementById("camaraEstado");
     const cerrarCamaraBtn = document.getElementById("cerrarCamaraBtn");
@@ -1258,6 +1275,17 @@
       document.body.style.overflow = "";
     }
 
+    function abrirActualizar() {
+      cerrarAjustes();
+      modalActualizar.classList.remove("oculto");
+      document.body.style.overflow = "hidden";
+    }
+
+    function cerrarActualizar() {
+      modalActualizar.classList.add("oculto");
+      document.body.style.overflow = "";
+    }
+
     function detenerCamara() {
       if (animacionCamara) {
         cancelAnimationFrame(animacionCamara);
@@ -1334,8 +1362,12 @@
       animacionCamara = requestAnimationFrame(leerQrDeCamara);
     }
 
-    async function abrirCamara() {
+    async function abrirCamara(modo = "actualizar") {
       cerrarAjustes();
+      cerrarActualizar();
+      tituloCamara.textContent = modo === "nuevo"
+        ? "📷 Nuevo paciente mediante QR"
+        : "📷 Actualizar mediante QR";
       modalCamara.classList.remove("oculto");
       document.body.style.overflow = "hidden";
       camaraEstado.textContent = "Solicitando permiso para usar la cámara…";
@@ -2721,8 +2753,10 @@
 
     abrirAjustesBtn.addEventListener("click", abrirAjustes);
     cerrarAjustesBtn.addEventListener("click", cerrarAjustes);
-    probarCamaraBtn.addEventListener("click", abrirCamara);
-    anadirPacienteQrBtn.addEventListener("click", abrirCamara);
+    actualizarDatosBtn.addEventListener("click", abrirActualizar);
+    cerrarActualizarBtn.addEventListener("click", cerrarActualizar);
+    probarCamaraBtn.addEventListener("click", () => abrirCamara("actualizar"));
+    anadirPacienteQrBtn.addEventListener("click", () => abrirCamara("nuevo"));
     cambiarPacienteBtn.addEventListener("click", () => {
       cerrarAjustes();
       mostrarSelectorPacientes();
@@ -2740,6 +2774,10 @@
       if (evento.target === modalAjustes) cerrarAjustes();
     });
 
+    modalActualizar.addEventListener("click", evento => {
+      if (evento.target === modalActualizar) cerrarActualizar();
+    });
+
     modalCamara.addEventListener("click", evento => {
       if (evento.target === modalCamara) cerrarCamara();
     });
@@ -2747,6 +2785,10 @@
     document.addEventListener("keydown", evento => {
       if (evento.key === "Escape" && !modalCamara.classList.contains("oculto")) {
         cerrarCamara();
+        return;
+      }
+      if (evento.key === "Escape" && !modalActualizar.classList.contains("oculto")) {
+        cerrarActualizar();
         return;
       }
       if (evento.key === "Escape" && !modalAjustes.classList.contains("oculto")) {
@@ -2785,6 +2827,7 @@
         vistaPacientes.classList.add("oculto");
         mostrarVista("inicio");
         cerrarAjustes();
+        cerrarActualizar();
         alert(pacienteImportado.existe
           ? "Listado importado correctamente."
           : "Perfil creado correctamente.");
