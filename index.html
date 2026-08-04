@@ -904,6 +904,41 @@
       background: var(--verde-claro);
     }
 
+    .pacientes-lista {
+      display: grid;
+      gap: 12px;
+    }
+
+    .paciente-perfil {
+      width: 100%;
+      text-align: left;
+      background: white;
+      color: var(--texto);
+      border: 1px solid var(--borde);
+      padding: 16px;
+      border-radius: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.05);
+    }
+
+    .paciente-perfil strong {
+      display: block;
+      font-size: 1.05rem;
+      margin-bottom: 5px;
+    }
+
+    .paciente-perfil span {
+      display: block;
+      color: var(--gris);
+      font-size: .9rem;
+      font-weight: 500;
+    }
+
+    .pacientes-acciones {
+      margin-top: 14px;
+      display: grid;
+      gap: 10px;
+    }
+
     @media (min-width: 580px) {
       .acciones {
         grid-template-columns: 1fr 1fr;
@@ -933,7 +968,8 @@
         <label class="boton-archivo" for="archivoJson">📂 Importar archivo JSON</label>
         <button id="probarCamaraBtn" class="secundario">📷 Actualizar mediante QR</button>
         <button id="instalarBtn" class="secundario oculto">📱 Instalar aplicación</button>
-        <button id="borrarBtn" class="peligro oculto">🗑️ Borrar datos del teléfono</button>
+        <button id="cambiarPacienteBtn" class="secundario oculto">👥 Cambiar paciente</button>
+        <button id="borrarBtn" class="peligro oculto">🗑️ Eliminar perfil</button>
       </div>
 
       <hr class="ajustes-separador">
@@ -967,6 +1003,17 @@
   </div>
 
   <main>
+
+    <section id="vistaPacientes" class="oculto">
+      <section class="panel">
+        <h2 class="fecha-titulo">Pacientes</h2>
+        <div id="listaPacientes" class="pacientes-lista"></div>
+        <div class="pacientes-acciones">
+          <label class="boton-archivo" for="archivoJson">📂 Añadir mediante archivo JSON</label>
+          <button id="anadirPacienteQrBtn" class="secundario">📷 Añadir mediante QR</button>
+        </div>
+      </section>
+    </section>
 
     <section id="vistaInicio">
       <section id="inicioSinDatos" class="panel">
@@ -1107,6 +1154,9 @@
     const CLAVE_DATOS = "farmacia_baiona_datos_v1";
     const CLAVE_RETIRADAS = "farmacia_baiona_retiradas_v1";
     const CLAVE_HISTORIAL = "farmacia_baiona_historial_v1";
+    const CLAVE_PACIENTES = "farmacia_baiona_pacientes_v1";
+    let indicePacientes = { pacientes: {}, cipActivo: "" };
+    let cipActivo = "";
     let datosActuales = null;
     let historialPermanente = [];
     let dispensacionesRetiradas = new Map();
@@ -1117,6 +1167,7 @@
     const cerrarAjustesBtn = document.getElementById("cerrarAjustesBtn");
     const modalAjustes = document.getElementById("modalAjustes");
     const instalarBtn = document.getElementById("instalarBtn");
+    const cambiarPacienteBtn = document.getElementById("cambiarPacienteBtn");
     const borrarBtn = document.getElementById("borrarBtn");
     const probarCamaraBtn = document.getElementById("probarCamaraBtn");
     const modalCamara = document.getElementById("modalCamara");
@@ -1135,6 +1186,9 @@
     const nombrePaciente = document.getElementById("nombrePaciente");
     const fechaGeneracion = document.getElementById("fechaGeneracion");
     const saludoPaciente = document.getElementById("saludoPaciente");
+    const vistaPacientes = document.getElementById("vistaPacientes");
+    const listaPacientes = document.getElementById("listaPacientes");
+    const anadirPacienteQrBtn = document.getElementById("anadirPacienteQrBtn");
     const inicioSinDatos = document.getElementById("inicioSinDatos");
     const inicioConDatos = document.getElementById("inicioConDatos");
     const resumenIcono = document.getElementById("resumenIcono");
@@ -1448,8 +1502,151 @@
       return item?.recogida_sergas === true;
     }
 
+    function clavePaciente(base, cip = cipActivo) {
+      return `${base}_${cip}`;
+    }
+
+    function guardarIndicePacientes() {
+      indicePacientes.cipActivo = cipActivo;
+      localStorage.setItem(CLAVE_PACIENTES, JSON.stringify(indicePacientes));
+    }
+
+    function cargarIndicePacientes() {
+      const guardado = localStorage.getItem(CLAVE_PACIENTES);
+      if (!guardado) return;
+
+      try {
+        const contenido = JSON.parse(guardado);
+        if (contenido && typeof contenido === "object" && contenido.pacientes && typeof contenido.pacientes === "object") {
+          indicePacientes = {
+            pacientes: contenido.pacientes,
+            cipActivo: String(contenido.cipActivo || "").trim().toLocaleUpperCase("es-ES")
+          };
+          cipActivo = indicePacientes.cipActivo;
+        }
+      } catch {
+        localStorage.removeItem(CLAVE_PACIENTES);
+      }
+    }
+
+    function registrarPaciente(datos) {
+      const cip = obtenerCipPaciente(datos);
+      if (!cip) return;
+      indicePacientes.pacientes[cip] = {
+        cip,
+        nombre: obtenerNombrePaciente(datos)
+      };
+      cipActivo = cip;
+      guardarIndicePacientes();
+    }
+
+    function migrarPacienteAnterior() {
+      if (Object.keys(indicePacientes.pacientes).length) return;
+
+      const guardado = localStorage.getItem(CLAVE_DATOS);
+      if (!guardado) return;
+
+      try {
+        const datos = JSON.parse(guardado);
+        validarDatos(datos);
+        const cip = obtenerCipPaciente(datos);
+        if (!cip) return;
+
+        localStorage.setItem(clavePaciente(CLAVE_DATOS, cip), guardado);
+        const retiradas = localStorage.getItem(CLAVE_RETIRADAS);
+        const historial = localStorage.getItem(CLAVE_HISTORIAL);
+        if (retiradas !== null) localStorage.setItem(clavePaciente(CLAVE_RETIRADAS, cip), retiradas);
+        if (historial !== null) localStorage.setItem(clavePaciente(CLAVE_HISTORIAL, cip), historial);
+
+        indicePacientes.pacientes[cip] = { cip, nombre: obtenerNombrePaciente(datos) };
+        cipActivo = cip;
+        guardarIndicePacientes();
+
+        localStorage.removeItem(CLAVE_DATOS);
+        localStorage.removeItem(CLAVE_RETIRADAS);
+        localStorage.removeItem(CLAVE_HISTORIAL);
+      } catch {
+        return;
+      }
+    }
+
+    function numeroPacientes() {
+      return Object.keys(indicePacientes.pacientes).length;
+    }
+
+    function actualizarBotonCambiarPaciente() {
+      cambiarPacienteBtn.classList.toggle("oculto", numeroPacientes() < 2);
+    }
+
+    function mostrarSelectorPacientes() {
+      const perfiles = Object.values(indicePacientes.pacientes)
+        .sort((a, b) => String(a.nombre).localeCompare(String(b.nombre), "es"));
+
+      listaPacientes.innerHTML = perfiles.map(perfil => {
+        let actualizado = "";
+        const guardado = localStorage.getItem(clavePaciente(CLAVE_DATOS, perfil.cip));
+        if (guardado) {
+          try {
+            const datos = JSON.parse(guardado);
+            if (datos.generado_el) {
+              actualizado = `Actualizado el ${new Date(datos.generado_el).toLocaleDateString("es-ES")}`;
+            }
+          } catch {
+            actualizado = "";
+          }
+        }
+        return `<button class="paciente-perfil" data-cip-paciente="${escaparHtml(perfil.cip)}">
+          <strong>${escaparHtml(perfil.nombre || "Paciente")}</strong>
+          ${actualizado ? `<span>${escaparHtml(actualizado)}</span>` : ""}
+        </button>`;
+      }).join("");
+
+      document.getElementById("vistaInicio").classList.add("oculto");
+      document.getElementById("vistaTodas").classList.add("oculto");
+      document.getElementById("vistaBuscar").classList.add("oculto");
+      vistaHistorial.classList.add("oculto");
+      vistaDetalle.classList.add("oculto");
+      vistaDetalleHistorial.classList.add("oculto");
+      vistaPacientes.classList.remove("oculto");
+      borrarBtn.classList.add("oculto");
+      document.querySelector(".navegacion").classList.add("oculto");
+      botonesNav.forEach(btn => btn.classList.remove("activo"));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function vaciarPacienteEnMemoria() {
+      datosActuales = null;
+      historialPermanente = [];
+      dispensacionesRetiradas = new Map();
+      busqueda.value = "";
+      datosPaciente.classList.add("oculto");
+      borrarBtn.classList.add("oculto");
+      inicioConDatos.classList.add("oculto");
+      inicioSinDatos.classList.remove("oculto");
+      listadoTodas.innerHTML = '<div class="vacio">Importa un archivo para ver las recetas.</div>';
+      listadoBusqueda.innerHTML = '<div class="vacio">Escribe el nombre de un medicamento.</div>';
+      listadoHistorial.innerHTML = '<div class="vacio">Todavía no hay medicamentos en el historial.</div>';
+    }
+
+    function cargarPaciente(cip, mostrarInicio = true) {
+      const cipNormalizado = String(cip || "").trim().toLocaleUpperCase("es-ES");
+      if (!indicePacientes.pacientes[cipNormalizado]) return false;
+
+      cipActivo = cipNormalizado;
+      guardarIndicePacientes();
+      vaciarPacienteEnMemoria();
+      cargarRetiradas();
+      cargarHistorial();
+      cargarLocalmente();
+      actualizarBotonCambiarPaciente();
+      document.querySelector(".navegacion").classList.remove("oculto");
+      vistaPacientes.classList.add("oculto");
+      if (mostrarInicio) mostrarVista("inicio");
+      return true;
+    }
+
     function cargarRetiradas() {
-      const guardadas = localStorage.getItem(CLAVE_RETIRADAS);
+      const guardadas = cipActivo ? localStorage.getItem(clavePaciente(CLAVE_RETIRADAS)) : null;
       if (!guardadas) return;
 
       try {
@@ -1471,14 +1668,15 @@
           );
         }
       } catch {
-        localStorage.removeItem(CLAVE_RETIRADAS);
+        if (cipActivo) localStorage.removeItem(clavePaciente(CLAVE_RETIRADAS));
         dispensacionesRetiradas = new Map();
       }
     }
 
     function guardarRetiradas() {
+      if (!cipActivo) return;
       localStorage.setItem(
-        CLAVE_RETIRADAS,
+        clavePaciente(CLAVE_RETIRADAS),
         JSON.stringify(Object.fromEntries(dispensacionesRetiradas))
       );
     }
@@ -1526,7 +1724,7 @@
     }
 
     function cargarHistorial() {
-      const guardado = localStorage.getItem(CLAVE_HISTORIAL);
+      const guardado = cipActivo ? localStorage.getItem(clavePaciente(CLAVE_HISTORIAL)) : null;
       if (!guardado) {
         historialPermanente = [];
         return;
@@ -1536,13 +1734,13 @@
         const contenido = JSON.parse(guardado);
         historialPermanente = Array.isArray(contenido) ? contenido : [];
       } catch {
-        localStorage.removeItem(CLAVE_HISTORIAL);
+        if (cipActivo) localStorage.removeItem(clavePaciente(CLAVE_HISTORIAL));
         historialPermanente = [];
       }
     }
 
     function guardarHistorial() {
-      localStorage.setItem(CLAVE_HISTORIAL, JSON.stringify(historialPermanente));
+      if (cipActivo) localStorage.setItem(clavePaciente(CLAVE_HISTORIAL), JSON.stringify(historialPermanente));
     }
 
     function fusionarConHistorial(datos) {
@@ -1640,23 +1838,10 @@
         );
       }
 
-      if (!datosActuales) return;
-
-      const cipActual = obtenerCipPaciente(datosActuales);
-      if (!cipActual) {
-        throw new Error(
-          "Los datos guardados en este dispositivo pertenecen a una versión anterior sin CIP. " +
-          "Para evitar mezclar pacientes, bórralos antes de importar este listado."
-        );
-      }
-
-      if (cipActual !== cipNuevo) {
-        throw new Error(
-          `Este dispositivo contiene los datos de ${obtenerNombrePaciente(datosActuales)}. ` +
-          `El listado que intentas importar pertenece a ${obtenerNombrePaciente(datos)}. ` +
-          "No se ha realizado la actualización."
-        );
-      }
+      return {
+        cip: cipNuevo,
+        existe: Boolean(indicePacientes.pacientes[cipNuevo])
+      };
     }
 
     function separarRetiradasSergas(datos) {
@@ -1674,9 +1859,11 @@
     }
 
     function guardarLocalmente(datos) {
+      registrarPaciente(datos);
       fusionarConHistorial(datos);
       const { datosActivos } = separarRetiradasSergas(datos);
-      localStorage.setItem(CLAVE_DATOS, JSON.stringify(datosActivos));
+      localStorage.setItem(clavePaciente(CLAVE_DATOS), JSON.stringify(datosActivos));
+      actualizarBotonCambiarPaciente();
       return datosActivos;
     }
 
@@ -1718,9 +1905,17 @@
       try {
         const datos = await decodificarDatosFbp(payload);
         validarDatos(datos);
-        validarPacienteParaImportacion(datos);
+        const pacienteImportado = validarPacienteParaImportacion(datos);
 
         const nombre = obtenerNombrePaciente(datos);
+        if (!pacienteImportado.existe && numeroPacientes() > 0) {
+          const crear = confirm(`No existe un perfil para ${nombre}.\n\n¿Crear un nuevo perfil?`);
+          if (!crear) {
+            limpiarDatosQrDeLaDireccion();
+            return;
+          }
+        }
+
         const { datosActivos, retiradasSergas } = separarRetiradasSergas(datos);
         const confirmado = confirm(
           `¿Quieres actualizar las próximas dispensaciones de ${nombre}?\n\n` +
@@ -1735,13 +1930,25 @@
           return;
         }
 
+        if (pacienteImportado.existe && pacienteImportado.cip !== cipActivo) {
+          cargarPaciente(pacienteImportado.cip, false);
+        } else if (!pacienteImportado.existe) {
+          cipActivo = pacienteImportado.cip;
+          historialPermanente = [];
+          dispensacionesRetiradas = new Map();
+        }
+
         datosActuales = guardarLocalmente(datos);
         busqueda.value = "";
         mostrarDatos();
+        document.querySelector(".navegacion").classList.remove("oculto");
+        vistaPacientes.classList.add("oculto");
         mostrarVista("inicio");
         limpiarDatosQrDeLaDireccion();
 
-        alert("Dispensaciones actualizadas correctamente.");
+        alert(pacienteImportado.existe
+          ? "Dispensaciones actualizadas correctamente."
+          : "Perfil creado correctamente.");
       } catch (error) {
         limpiarDatosQrDeLaDireccion();
         alert(`No se pudo leer el código QR:\n${error.message}`);
@@ -1755,7 +1962,7 @@
     }
 
     function cargarLocalmente() {
-      const guardado = localStorage.getItem(CLAVE_DATOS);
+      const guardado = cipActivo ? localStorage.getItem(clavePaciente(CLAVE_DATOS)) : null;
       if (!guardado) return;
       try {
         const datos = JSON.parse(guardado);
@@ -1763,10 +1970,10 @@
         fusionarConHistorial(datos);
         const { datosActivos } = separarRetiradasSergas(datos);
         datosActuales = datosActivos;
-        localStorage.setItem(CLAVE_DATOS, JSON.stringify(datosActivos));
+        localStorage.setItem(clavePaciente(CLAVE_DATOS), JSON.stringify(datosActivos));
         mostrarDatos();
       } catch {
-        localStorage.removeItem(CLAVE_DATOS);
+        if (cipActivo) localStorage.removeItem(clavePaciente(CLAVE_DATOS));
       }
     }
 
@@ -1791,6 +1998,7 @@
       saludoPaciente.textContent = `Hola, ${primerNombre(obtenerNombrePaciente(datosActuales))}.`;
       datosPaciente.classList.remove("oculto");
       borrarBtn.classList.remove("oculto");
+      actualizarBotonCambiarPaciente();
       inicioSinDatos.classList.add("oculto");
       inicioConDatos.classList.remove("oculto");
 
@@ -2410,6 +2618,8 @@
     }
 
     function mostrarVista(nombre) {
+      vistaPacientes.classList.add("oculto");
+      document.querySelector(".navegacion").classList.remove("oculto");
       vistaAnteriorDetalle = nombre;
       document.getElementById("vistaInicio").classList.toggle("oculto", nombre !== "inicio");
       document.getElementById("vistaTodas").classList.toggle("oculto", nombre !== "todas");
@@ -2428,6 +2638,12 @@
     }
 
     document.addEventListener("click", evento => {
+      const perfilPaciente = evento.target.closest("[data-cip-paciente]");
+      if (perfilPaciente) {
+        cargarPaciente(perfilPaciente.dataset.cipPaciente);
+        return;
+      }
+
       const botonAccion = evento.target.closest("[data-accion-dispensacion]");
 
       if (botonAccion) {
@@ -2504,6 +2720,11 @@
     abrirAjustesBtn.addEventListener("click", abrirAjustes);
     cerrarAjustesBtn.addEventListener("click", cerrarAjustes);
     probarCamaraBtn.addEventListener("click", abrirCamara);
+    anadirPacienteQrBtn.addEventListener("click", abrirCamara);
+    cambiarPacienteBtn.addEventListener("click", () => {
+      cerrarAjustes();
+      mostrarSelectorPacientes();
+    });
     cerrarCamaraBtn.addEventListener("click", cerrarCamara);
     cerrarCamaraInferiorBtn.addEventListener("click", cerrarCamara);
 
@@ -2534,13 +2755,32 @@
         const texto = await archivo.text();
         const datos = JSON.parse(texto);
         validarDatos(datos);
-        validarPacienteParaImportacion(datos);
+        const pacienteImportado = validarPacienteParaImportacion(datos);
+        const nombre = obtenerNombrePaciente(datos);
+
+        if (!pacienteImportado.existe && numeroPacientes() > 0) {
+          const crear = confirm(`No existe un perfil para ${nombre}.\n\n¿Crear un nuevo perfil?`);
+          if (!crear) return;
+        }
+
+        if (pacienteImportado.existe && pacienteImportado.cip !== cipActivo) {
+          cargarPaciente(pacienteImportado.cip, false);
+        } else if (!pacienteImportado.existe) {
+          cipActivo = pacienteImportado.cip;
+          historialPermanente = [];
+          dispensacionesRetiradas = new Map();
+        }
+
         datosActuales = guardarLocalmente(datos);
         busqueda.value = "";
         mostrarDatos();
+        document.querySelector(".navegacion").classList.remove("oculto");
+        vistaPacientes.classList.add("oculto");
         mostrarVista("inicio");
         cerrarAjustes();
-        alert("Listado importado correctamente.");
+        alert(pacienteImportado.existe
+          ? "Listado importado correctamente."
+          : "Perfil creado correctamente.");
       } catch (error) {
         alert(`No se pudo importar el archivo:\n${error.message}`);
       } finally {
@@ -2555,24 +2795,30 @@
     });
 
     borrarBtn.addEventListener("click", () => {
-      if (!confirm("¿Borrar del dispositivo todos los datos importados?")) return;
+      if (!datosActuales || !cipActivo) return;
+      const nombre = obtenerNombrePaciente(datosActuales);
+      if (!confirm(`¿Eliminar el perfil de ${nombre}?`)) return;
 
-      localStorage.removeItem(CLAVE_DATOS);
-      localStorage.removeItem(CLAVE_RETIRADAS);
-      localStorage.removeItem(CLAVE_HISTORIAL);
-      historialPermanente = [];
-      dispensacionesRetiradas = new Map();
-      datosActuales = null;
-      busqueda.value = "";
-      datosPaciente.classList.add("oculto");
-      borrarBtn.classList.add("oculto");
-      inicioConDatos.classList.add("oculto");
-      inicioSinDatos.classList.remove("oculto");
-      listadoTodas.innerHTML = '<div class="vacio">Importa un archivo para ver las recetas.</div>';
-      listadoBusqueda.innerHTML = '<div class="vacio">Escribe el nombre de un medicamento.</div>';
-      listadoHistorial.innerHTML = '<div class="vacio">Todavía no hay medicamentos en el historial.</div>';
-      mostrarVista("inicio");
+      localStorage.removeItem(clavePaciente(CLAVE_DATOS));
+      localStorage.removeItem(clavePaciente(CLAVE_RETIRADAS));
+      localStorage.removeItem(clavePaciente(CLAVE_HISTORIAL));
+      delete indicePacientes.pacientes[cipActivo];
+
+      const restantes = Object.keys(indicePacientes.pacientes);
+      cipActivo = restantes.length === 1 ? restantes[0] : "";
+      guardarIndicePacientes();
+      vaciarPacienteEnMemoria();
       cerrarAjustes();
+
+      if (restantes.length === 1) {
+        cargarPaciente(restantes[0]);
+      } else if (restantes.length > 1) {
+        mostrarSelectorPacientes();
+      } else {
+        actualizarBotonCambiarPaciente();
+        document.querySelector(".navegacion").classList.remove("oculto");
+        mostrarVista("inicio");
+      }
     });
 
     window.addEventListener("beforeinstallprompt", (evento) => {
@@ -2600,9 +2846,17 @@
       window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js"));
     }
 
-    cargarRetiradas();
-    cargarHistorial();
-    cargarLocalmente();
+    cargarIndicePacientes();
+    migrarPacienteAnterior();
+
+    const pacientesIniciales = Object.keys(indicePacientes.pacientes);
+    if (pacientesIniciales.length > 1) {
+      mostrarSelectorPacientes();
+    } else if (pacientesIniciales.length === 1) {
+      cargarPaciente(pacientesIniciales[0], false);
+    } else {
+      actualizarBotonCambiarPaciente();
+    }
 
     window.addEventListener("pageshow", () => {
       procesarImportacionDesdeQr();
