@@ -1,4 +1,4 @@
-const CACHE = "farmacia-baiona-ux-prueba-1";
+const CACHE = "farmacia-baiona-ux-prueba-2";
 const ARCHIVOS = [
   "./",
   "./index.html",

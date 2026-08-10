@@ -365,6 +365,27 @@
       box-shadow: 0 18px 50px rgba(0,0,0,.24);
     }
 
+    .modal-confirmacion {
+      width: min(100%, 430px);
+      background: var(--blanco);
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 18px 50px rgba(0,0,0,.24);
+    }
+
+    .confirmacion-texto {
+      margin: 0 0 18px;
+      color: var(--texto);
+      line-height: 1.45;
+      white-space: pre-line;
+    }
+
+    .confirmacion-acciones {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
     .ajustes-cabecera {
       display: flex;
       align-items: center;
@@ -1037,6 +1058,18 @@
     </section>
   </div>
 
+
+  <div id="modalConfirmacion" class="modal-fondo oculto" role="dialog" aria-modal="true" aria-labelledby="tituloConfirmacion">
+    <section class="modal-confirmacion">
+      <h2 id="tituloConfirmacion" class="ajustes-titulo"></h2>
+      <p id="textoConfirmacion" class="confirmacion-texto"></p>
+      <div class="confirmacion-acciones">
+        <button id="cancelarConfirmacionBtn" class="secundario" type="button">Cancelar</button>
+        <button id="aceptarConfirmacionBtn" class="primario" type="button">Confirmar</button>
+      </div>
+    </section>
+  </div>
+
   <main>
 
     <section id="vistaPacientes" class="oculto">
@@ -1207,6 +1240,38 @@
     const borrarBtn = document.getElementById("borrarBtn");
     const probarCamaraBtn = document.getElementById("probarCamaraBtn");
     const modalCamara = document.getElementById("modalCamara");
+    const modalConfirmacion = document.getElementById("modalConfirmacion");
+    const tituloConfirmacion = document.getElementById("tituloConfirmacion");
+    const textoConfirmacion = document.getElementById("textoConfirmacion");
+    const cancelarConfirmacionBtn = document.getElementById("cancelarConfirmacionBtn");
+    const aceptarConfirmacionBtn = document.getElementById("aceptarConfirmacionBtn");
+
+    function confirmarFBP(titulo, mensaje, textoAceptar) {
+      return new Promise(resolve => {
+        tituloConfirmacion.textContent = titulo;
+        textoConfirmacion.textContent = mensaje;
+        aceptarConfirmacionBtn.textContent = textoAceptar || "Confirmar";
+        modalConfirmacion.classList.remove("oculto");
+
+        const cerrar = resultado => {
+          modalConfirmacion.classList.add("oculto");
+          cancelarConfirmacionBtn.removeEventListener("click", cancelar);
+          aceptarConfirmacionBtn.removeEventListener("click", aceptar);
+          modalConfirmacion.removeEventListener("click", fondo);
+          document.removeEventListener("keydown", teclado);
+          resolve(resultado);
+        };
+        const cancelar = () => cerrar(false);
+        const aceptar = () => cerrar(true);
+        const fondo = evento => { if (evento.target === modalConfirmacion) cerrar(false); };
+        const teclado = evento => { if (evento.key === "Escape") cerrar(false); };
+
+        cancelarConfirmacionBtn.addEventListener("click", cancelar);
+        aceptarConfirmacionBtn.addEventListener("click", aceptar);
+        modalConfirmacion.addEventListener("click", fondo);
+        document.addEventListener("keydown", teclado);
+      });
+    }
     const tituloCamara = document.getElementById("tituloCamara");
     const camaraVideo = document.getElementById("camaraVideo");
     const camaraEstado = document.getElementById("camaraEstado");
@@ -2558,7 +2623,13 @@
         .filter(item => estaRetirada(item) && fechaRetirada(item))
         .sort((a, b) => String(b.fecha_activacion).localeCompare(String(a.fecha_activacion)));
 
-      if (!dispensaciones.length) return;
+      if (!dispensaciones.length) {
+        if (!vistaDetalleHistorial.classList.contains("oculto")) {
+          mostrarVista("historial");
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+        return;
+      }
 
       const activo = medicamentosActualesNormalizados().has(claveNombre);
       detalleHistorialNombre.textContent = nombreMedicamento;
@@ -2677,7 +2748,7 @@
       }
     }
 
-    document.addEventListener("click", evento => {
+    document.addEventListener("click", async evento => {
       const perfilPaciente = evento.target.closest("[data-cip-paciente]");
       if (perfilPaciente) {
         cargarPaciente(perfilPaciente.dataset.cipPaciente);
@@ -2694,14 +2765,18 @@
         const accion = botonAccion.dataset.accionDispensacion;
 
         if (accion === "retirar") {
-          const confirmado = confirm(
-            `¿Marcar esta receta como retirada?\n\n${nombre}`
+          const confirmado = await confirmarFBP(
+            "Marcar como retirada",
+            nombre,
+            "Marcar como retirada"
           );
           if (!confirmado) return;
           marcarComoRetirada(item);
         } else if (accion === "deshacer") {
-          const confirmado = confirm(
-            `¿Deshacer la retirada de esta dispensación?\n\n${nombre}`
+          const confirmado = await confirmarFBP(
+            "Deshacer retirada",
+            nombre,
+            "Deshacer retirada"
           );
           if (!confirmado) return;
           deshacerRetirada(item);
