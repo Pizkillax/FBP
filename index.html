@@ -1019,13 +1019,29 @@
       <div class="ajustes-info">
         <strong>FBP</strong><br>
         Farmacia Baiona Pacientes
-        <div class="ajustes-version">Versión 2.0.0</div>
+        <div class="ajustes-version">Versión 2.1.0</div>
 
         <hr class="ajustes-separador">
 
         Los datos se almacenan únicamente en este dispositivo y no se envían a ningún servidor.
 
         <div class="ajustes-version">© 2026 Farmacia Baiona</div>
+      </div>
+    </section>
+  </div>
+
+  <div id="modalInstalacion" class="modal-fondo oculto" role="dialog" aria-modal="true" aria-labelledby="tituloInstalacion">
+    <section class="modal-ajustes">
+      <div class="ajustes-cabecera">
+        <h2 id="tituloInstalacion" class="ajustes-titulo">📱 Instala FBP</h2>
+        <button id="cerrarInstalacionBtn" class="cerrar-ajustes-btn" aria-label="Cerrar instalación">✕</button>
+      </div>
+
+      <div id="textoInstalacion" class="ajustes-info"></div>
+
+      <div class="ajustes-opciones" style="margin-top:16px;">
+        <button id="instalarDesdeQrBtn" class="primario oculto">📱 Instalar FBP</button>
+        <button id="cerrarInstalacionSecundarioBtn" class="secundario">Ahora no</button>
       </div>
     </section>
   </div>
@@ -1235,6 +1251,11 @@
     const modalActualizar = document.getElementById("modalActualizar");
     const cerrarActualizarBtn = document.getElementById("cerrarActualizarBtn");
     const instalarBtn = document.getElementById("instalarBtn");
+    const modalInstalacion = document.getElementById("modalInstalacion");
+    const cerrarInstalacionBtn = document.getElementById("cerrarInstalacionBtn");
+    const cerrarInstalacionSecundarioBtn = document.getElementById("cerrarInstalacionSecundarioBtn");
+    const instalarDesdeQrBtn = document.getElementById("instalarDesdeQrBtn");
+    const textoInstalacion = document.getElementById("textoInstalacion");
     const cambiarPacienteBtn = document.getElementById("cambiarPacienteBtn");
     const sugerenciasBtn = document.getElementById("sugerenciasBtn");
     const borrarBtn = document.getElementById("borrarBtn");
@@ -1344,6 +1365,45 @@
     const CIMA_API_MEDICAMENTOS = "https://cima.aemps.es/cima/rest/medicamentos";
     const CIMA_API_MEDICAMENTO = "https://cima.aemps.es/cima/rest/medicamento";
     const CIMA_BASE = "https://cima.aemps.es/";
+
+    function estaInstaladaComoApp() {
+      return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+    }
+
+    function esIOS() {
+      return /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    }
+
+    function abrirAyudaInstalacionDesdeQr() {
+      if (estaInstaladaComoApp()) return;
+
+      if (esIOS()) {
+        textoInstalacion.innerHTML =
+          '<strong>Instala FBP en tu iPhone</strong><br><br>' +
+          '1. Pulsa <strong>Compartir</strong> en Safari.<br>' +
+          '2. Elige <strong>Añadir a pantalla de inicio</strong>.<br>' +
+          '3. Pulsa <strong>Añadir</strong>.';
+        instalarDesdeQrBtn.classList.add("oculto");
+      } else {
+        textoInstalacion.innerHTML =
+          '<strong>Instala FBP en tu teléfono</strong><br><br>' +
+          'Así podrás abrirla directamente desde la pantalla de inicio.';
+        if (eventoInstalacion) {
+          instalarDesdeQrBtn.classList.remove("oculto");
+        } else {
+          instalarDesdeQrBtn.classList.add("oculto");
+          textoInstalacion.innerHTML +=
+            '<br><br>Si no aparece el botón de instalación, abre el menú del navegador y pulsa <strong>Instalar aplicación</strong> o <strong>Añadir a pantalla de inicio</strong>.';
+        }
+      }
+
+      modalInstalacion.classList.remove("oculto");
+    }
+
+    function cerrarAyudaInstalacion() {
+      modalInstalacion.classList.add("oculto");
+    }
 
     function abrirAjustes() {
       modalAjustes.classList.remove("oculto");
@@ -2941,6 +3001,9 @@
       evento.preventDefault();
       eventoInstalacion = evento;
       instalarBtn.classList.remove("oculto");
+      if (!modalInstalacion.classList.contains("oculto") && !esIOS()) {
+        instalarDesdeQrBtn.classList.remove("oculto");
+      }
     });
 
     instalarBtn.addEventListener("click", async () => {
@@ -2952,11 +3015,37 @@
       cerrarAjustes();
     });
 
+    instalarDesdeQrBtn.addEventListener("click", async () => {
+      if (!eventoInstalacion) return;
+      eventoInstalacion.prompt();
+      await eventoInstalacion.userChoice;
+      eventoInstalacion = null;
+      instalarBtn.classList.add("oculto");
+      instalarDesdeQrBtn.classList.add("oculto");
+      cerrarAyudaInstalacion();
+    });
+
+    cerrarInstalacionBtn.addEventListener("click", cerrarAyudaInstalacion);
+    cerrarInstalacionSecundarioBtn.addEventListener("click", cerrarAyudaInstalacion);
+    modalInstalacion.addEventListener("click", evento => {
+      if (evento.target === modalInstalacion) cerrarAyudaInstalacion();
+    });
+
+    document.addEventListener("keydown", evento => {
+      if (evento.key === "Escape" && !modalInstalacion.classList.contains("oculto")) {
+        cerrarAyudaInstalacion();
+      }
+    });
+
     document.addEventListener("visibilitychange", () => {
       if (document.hidden && !modalCamara.classList.contains("oculto")) {
         cerrarCamara();
       }
     });
+
+    if (new URLSearchParams(window.location.search).get("instalar") === "1") {
+      window.setTimeout(abrirAyudaInstalacionDesdeQr, 250);
+    }
 
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js"));
