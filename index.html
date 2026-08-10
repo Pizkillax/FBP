@@ -1041,6 +1041,7 @@
 
       <div class="ajustes-opciones" style="margin-top:16px;">
         <button id="instalarDesdeQrBtn" class="primario oculto">📱 Instalar FBP</button>
+        <button id="entendidoInstalacionBtn" class="primario oculto">✓ Entendido</button>
         <button id="cerrarInstalacionSecundarioBtn" class="secundario">Ahora no</button>
       </div>
     </section>
@@ -1255,6 +1256,7 @@
     const cerrarInstalacionBtn = document.getElementById("cerrarInstalacionBtn");
     const cerrarInstalacionSecundarioBtn = document.getElementById("cerrarInstalacionSecundarioBtn");
     const instalarDesdeQrBtn = document.getElementById("instalarDesdeQrBtn");
+    const entendidoInstalacionBtn = document.getElementById("entendidoInstalacionBtn");
     const textoInstalacion = document.getElementById("textoInstalacion");
     const cambiarPacienteBtn = document.getElementById("cambiarPacienteBtn");
     const sugerenciasBtn = document.getElementById("sugerenciasBtn");
@@ -1385,10 +1387,12 @@
           '2. Elige <strong>Añadir a pantalla de inicio</strong>.<br>' +
           '3. Pulsa <strong>Añadir</strong>.';
         instalarDesdeQrBtn.classList.add("oculto");
+        entendidoInstalacionBtn.classList.remove("oculto");
       } else {
         textoInstalacion.innerHTML =
           '<strong>Instala FBP en tu teléfono</strong><br><br>' +
           'Así podrás abrirla directamente desde la pantalla de inicio.';
+        entendidoInstalacionBtn.classList.add("oculto");
         if (eventoInstalacion) {
           instalarDesdeQrBtn.classList.remove("oculto");
         } else {
@@ -3026,6 +3030,7 @@
     });
 
     cerrarInstalacionBtn.addEventListener("click", cerrarAyudaInstalacion);
+    entendidoInstalacionBtn.addEventListener("click", cerrarAyudaInstalacion);
     cerrarInstalacionSecundarioBtn.addEventListener("click", cerrarAyudaInstalacion);
     modalInstalacion.addEventListener("click", evento => {
       if (evento.target === modalInstalacion) cerrarAyudaInstalacion();
