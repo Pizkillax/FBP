@@ -1110,6 +1110,7 @@
           <h2 id="saludoPaciente" class="saludo"></h2>
           <p class="subtitulo-inicio">Estado de las próximas recetas.</p>
           <div id="fechaGeneracion" class="meta meta-compacta"></div>
+          <div id="cipPaciente" class="meta meta-compacta"></div>
           <div id="nombrePaciente" class="oculto"></div>
         </section>
 
@@ -1310,6 +1311,7 @@
     const datosPaciente = document.getElementById("datosPaciente");
     const nombrePaciente = document.getElementById("nombrePaciente");
     const fechaGeneracion = document.getElementById("fechaGeneracion");
+    const cipPaciente = document.getElementById("cipPaciente");
     const saludoPaciente = document.getElementById("saludoPaciente");
     const vistaPacientes = document.getElementById("vistaPacientes");
     const listaPacientes = document.getElementById("listaPacientes");
@@ -2177,6 +2179,7 @@
 
       fechaGeneracion.textContent =
         `Actualizado el ${generadoTexto} · ${datosActuales.dispensaciones.length} dispensaciones`;
+      cipPaciente.textContent = `CIP: ${obtenerCipPaciente(datosActuales)}`;
 
       saludoPaciente.textContent = `Hola, ${primerNombre(obtenerNombrePaciente(datosActuales))}.`;
       datosPaciente.classList.remove("oculto");
