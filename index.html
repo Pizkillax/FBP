@@ -1931,38 +1931,10 @@
         historialPermanente.map(item => [claveDispensacion(item), item])
       );
 
-      for (const itemOriginal of datos.dispensaciones) {
-        let item = { ...itemOriginal };
-
-        if (retiradaConfirmadaSergas(item)) {
-          const fechaRetiradaSergas = String(item.fecha_retirada_sergas || item.fecha_activacion || "").slice(0, 10);
-          const nombreNormalizado = normalizarMedicamento(item.medicamento);
-          const caducidad = String(item.fecha_caducidad || "").trim();
-
-          const candidatos = historialPermanente.filter(anterior =>
-            !retiradaConfirmadaSergas(anterior) &&
-            normalizarMedicamento(anterior.medicamento) === nombreNormalizado &&
-            String(anterior.fecha_caducidad || "").trim() === caducidad &&
-            String(anterior.fecha_activacion || "").trim() <= fechaRetiradaSergas &&
-            (!caducidad || fechaRetiradaSergas <= caducidad)
-          );
-
-          const candidatosManuales = candidatos.filter(anterior =>
-            String(fechaRetirada(anterior) || "").slice(0, 10) === fechaRetiradaSergas
-          );
-
-          const candidato = candidatosManuales.length === 1
-            ? candidatosManuales[0]
-            : (candidatos.length === 1 ? candidatos[0] : null);
-
-          if (candidato) {
-            item.fecha_activacion = candidato.fecha_activacion;
-          }
-        }
-
+      for (const item of datos.dispensaciones) {
         const clave = claveDispensacion(item);
         const anterior = indice.get(clave);
-        indice.set(clave, anterior ? { ...anterior, ...item } : item);
+        indice.set(clave, anterior ? { ...anterior, ...item } : { ...item });
       }
 
       historialPermanente = [...indice.values()].sort((a, b) =>
