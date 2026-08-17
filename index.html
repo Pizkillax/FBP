@@ -1930,6 +1930,7 @@
       const indice = new Map(
         historialPermanente.map(item => [claveDispensacion(item), item])
       );
+      const usadosEnEstaFusion = new Set();
 
       for (const itemOriginal of datos.dispensaciones) {
         let item = { ...itemOriginal };
@@ -1937,23 +1938,47 @@
         if (retiradaConfirmadaSergas(item)) {
           const fechaRetiradaSergas = String(item.fecha_retirada_sergas || item.fecha_activacion || "").slice(0, 10);
           const nombreNormalizado = normalizarMedicamento(item.medicamento);
-          const caducidad = String(item.fecha_caducidad || "").trim();
+          const caducidadNueva = String(item.fecha_caducidad || "").trim();
 
-          const candidatos = historialPermanente.filter(anterior =>
-            !retiradaConfirmadaSergas(anterior) &&
+          const yaConfirmados = historialPermanente.filter(anterior =>
+            retiradaConfirmadaSergas(anterior) &&
             normalizarMedicamento(anterior.medicamento) === nombreNormalizado &&
-            String(anterior.fecha_caducidad || "").trim() === caducidad &&
-            String(anterior.fecha_activacion || "").trim() <= fechaRetiradaSergas &&
-            (!caducidad || fechaRetiradaSergas <= caducidad)
+            String(fechaRetirada(anterior) || "").slice(0, 10) === fechaRetiradaSergas &&
+            String(anterior.fecha_caducidad || "").trim() === caducidadNueva
           );
 
-          const candidatosManuales = candidatos.filter(anterior =>
-            String(fechaRetirada(anterior) || "").slice(0, 10) === fechaRetiradaSergas
-          );
+          let candidato = yaConfirmados.length === 1 ? yaConfirmados[0] : null;
 
-          const candidato = candidatosManuales.length === 1
-            ? candidatosManuales[0]
-            : (candidatos.length === 1 ? candidatos[0] : null);
+          if (!candidato) {
+            const candidatosPendientes = historialPermanente
+              .filter(anterior => {
+                const claveAnterior = claveDispensacion(anterior);
+                const activacionAnterior = String(anterior.fecha_activacion || "").trim();
+                const caducidadAnterior = String(anterior.fecha_caducidad || "").trim();
+                return !usadosEnEstaFusion.has(claveAnterior) &&
+                  !retiradaConfirmadaSergas(anterior) &&
+                  normalizarMedicamento(anterior.medicamento) === nombreNormalizado &&
+                  activacionAnterior &&
+                  activacionAnterior <= fechaRetiradaSergas &&
+                  (!caducidadAnterior || fechaRetiradaSergas <= caducidadAnterior);
+              })
+              .sort((a, b) =>
+                String(a.fecha_activacion || "").localeCompare(String(b.fecha_activacion || "")) ||
+                String(a.fecha_caducidad || "").localeCompare(String(b.fecha_caducidad || ""))
+              );
+
+            const candidatosManuales = candidatosPendientes.filter(anterior =>
+              String(fechaRetirada(anterior) || "").slice(0, 10) === fechaRetiradaSergas
+            );
+
+            candidato = candidatosManuales.length
+              ? candidatosManuales[0]
+              : (candidatosPendientes.length ? candidatosPendientes[0] : null);
+
+            if (candidato) {
+              usadosEnEstaFusion.add(claveDispensacion(candidato));
+            }
+          }
 
           if (candidato) {
             item.fecha_activacion = candidato.fecha_activacion;
