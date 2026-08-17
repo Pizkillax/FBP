@@ -1971,12 +1971,14 @@
       }
 
       const retiradasNuevas = new Set();
+      const retiradasConocidas = new Set();
       for (const item of datos.dispensaciones) {
         if (!retiradaConfirmadaSergas(item)) continue;
         const firma = firmaRetirada(item);
         const conocidas = retiradasYaConocidas.get(firma) || 0;
         if (conocidas > 0) {
           retiradasYaConocidas.set(firma, conocidas - 1);
+          retiradasConocidas.add(item);
         } else {
           retiradasNuevas.add(item);
         }
@@ -1993,6 +1995,8 @@
       }
 
       for (const itemOriginal of datos.dispensaciones) {
+        if (retiradasConocidas.has(itemOriginal)) continue;
+
         let item = { ...itemOriginal };
 
         if (retiradasNuevas.has(itemOriginal) && activosAnteriores.length) {
