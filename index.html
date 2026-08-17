@@ -2014,26 +2014,52 @@
 
       const activacionOriginalPorRetirada = new Map();
       for (const [nombre, nuevas] of retiradasNuevasPorMedicamento.entries()) {
-        const candidatos = desaparecidasPorMedicamento.get(nombre) || [];
-        let indiceCandidato = 0;
+        const candidatos = [...(desaparecidasPorMedicamento.get(nombre) || [])];
+        const nuevasPendientes = [...nuevas];
 
-        for (const retirada of nuevas) {
+        // 1) Si SERGAS conserva la misma fecha de caducidad, esa coincidencia
+        // identifica directamente qué dispensación pendiente ha desaparecido.
+        for (let i = nuevasPendientes.length - 1; i >= 0; i -= 1) {
+          const retirada = nuevasPendientes[i];
+          const caducidad = String(retirada.fecha_caducidad || "").trim();
+          if (!caducidad) continue;
+
+          const indiceExacto = candidatos.findIndex(anterior =>
+            String(anterior.fecha_caducidad || "").trim() === caducidad
+          );
+          if (indiceExacto < 0) continue;
+
+          const anterior = candidatos[indiceExacto];
+          activacionOriginalPorRetirada.set(retirada, anterior.fecha_activacion);
+          indice.delete(claveDispensacion(anterior));
+          candidatos.splice(indiceExacto, 1);
+          nuevasPendientes.splice(i, 1);
+        }
+
+        // 2) Para las que no conservan caducidad, mantenemos la regla FIFO
+        // ya validada con las actualizaciones incrementales.
+        candidatos.sort((a, b) =>
+          String(a.fecha_activacion || "").localeCompare(String(b.fecha_activacion || ""))
+        );
+        nuevasPendientes.sort((a, b) =>
+          String(a.fecha_retirada_sergas || a.fecha_activacion || "").localeCompare(
+            String(b.fecha_retirada_sergas || b.fecha_activacion || "")
+          ) ||
+          String(a.fecha_caducidad || "").localeCompare(String(b.fecha_caducidad || ""))
+        );
+
+        const cantidad = Math.min(candidatos.length, nuevasPendientes.length);
+        for (let i = 0; i < cantidad; i += 1) {
+          const anterior = candidatos[i];
+          const retirada = nuevasPendientes[i];
           const fechaRetirada = String(
             retirada.fecha_retirada_sergas || retirada.fecha_activacion || ""
           ).slice(0, 10);
+          const fechaActivacion = String(anterior.fecha_activacion || "").slice(0, 10);
 
-          while (
-            indiceCandidato < candidatos.length &&
-            String(candidatos[indiceCandidato].fecha_activacion || "").slice(0, 10) > fechaRetirada
-          ) {
-            indiceCandidato += 1;
-          }
-
-          if (indiceCandidato < candidatos.length) {
-            const anterior = candidatos[indiceCandidato];
+          if (fechaActivacion && fechaRetirada && fechaActivacion <= fechaRetirada) {
             activacionOriginalPorRetirada.set(retirada, anterior.fecha_activacion);
             indice.delete(claveDispensacion(anterior));
-            indiceCandidato += 1;
           }
         }
       }
