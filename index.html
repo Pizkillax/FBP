@@ -1930,58 +1930,83 @@
       const indice = new Map(
         historialPermanente.map(item => [claveDispensacion(item), item])
       );
-      const usadosEnEstaFusion = new Set();
+
+      const activosAnteriores = Array.isArray(datosActuales?.dispensaciones)
+        ? datosActuales.dispensaciones
+        : [];
+      const activosNuevos = datos.dispensaciones.filter(item => !retiradaConfirmadaSergas(item));
+
+      const contarClaves = items => {
+        const contador = new Map();
+        for (const item of items) {
+          const clave = claveDispensacion(item);
+          contador.set(clave, (contador.get(clave) || 0) + 1);
+        }
+        return contador;
+      };
+
+      const clavesNuevas = contarClaves(activosNuevos);
+      const desaparecidas = [];
+      for (const item of activosAnteriores) {
+        const clave = claveDispensacion(item);
+        const disponibles = clavesNuevas.get(clave) || 0;
+        if (disponibles > 0) {
+          clavesNuevas.set(clave, disponibles - 1);
+        } else {
+          desaparecidas.push(item);
+        }
+      }
+
+      const firmaRetirada = item => JSON.stringify([
+        normalizarMedicamento(item.medicamento),
+        String(item.fecha_retirada_sergas || item.fecha_activacion || "").slice(0, 10),
+        String(item.fecha_caducidad || "").trim()
+      ]);
+
+      const retiradasYaConocidas = new Map();
+      for (const item of historialPermanente) {
+        if (!retiradaConfirmadaSergas(item)) continue;
+        const firma = firmaRetirada(item);
+        retiradasYaConocidas.set(firma, (retiradasYaConocidas.get(firma) || 0) + 1);
+      }
+
+      const retiradasNuevas = new Set();
+      for (const item of datos.dispensaciones) {
+        if (!retiradaConfirmadaSergas(item)) continue;
+        const firma = firmaRetirada(item);
+        const conocidas = retiradasYaConocidas.get(firma) || 0;
+        if (conocidas > 0) {
+          retiradasYaConocidas.set(firma, conocidas - 1);
+        } else {
+          retiradasNuevas.add(item);
+        }
+      }
+
+      const desaparecidasPorMedicamento = new Map();
+      for (const item of desaparecidas) {
+        const nombre = normalizarMedicamento(item.medicamento);
+        if (!desaparecidasPorMedicamento.has(nombre)) desaparecidasPorMedicamento.set(nombre, []);
+        desaparecidasPorMedicamento.get(nombre).push(item);
+      }
+      for (const items of desaparecidasPorMedicamento.values()) {
+        items.sort((a, b) => String(a.fecha_activacion).localeCompare(String(b.fecha_activacion)));
+      }
 
       for (const itemOriginal of datos.dispensaciones) {
         let item = { ...itemOriginal };
 
-        if (retiradaConfirmadaSergas(item)) {
+        if (retiradasNuevas.has(itemOriginal) && activosAnteriores.length) {
+          const nombre = normalizarMedicamento(item.medicamento);
+          const candidatos = desaparecidasPorMedicamento.get(nombre) || [];
           const fechaRetiradaSergas = String(item.fecha_retirada_sergas || item.fecha_activacion || "").slice(0, 10);
-          const nombreNormalizado = normalizarMedicamento(item.medicamento);
-          const caducidadNueva = String(item.fecha_caducidad || "").trim();
-
-          const yaConfirmados = historialPermanente.filter(anterior =>
-            retiradaConfirmadaSergas(anterior) &&
-            normalizarMedicamento(anterior.medicamento) === nombreNormalizado &&
-            String(fechaRetirada(anterior) || "").slice(0, 10) === fechaRetiradaSergas &&
-            String(anterior.fecha_caducidad || "").trim() === caducidadNueva
+          const posicion = candidatos.findIndex(anterior =>
+            String(anterior.fecha_activacion || "").slice(0, 10) <= fechaRetiradaSergas
           );
 
-          let candidato = yaConfirmados.length === 1 ? yaConfirmados[0] : null;
-
-          if (!candidato) {
-            const candidatosPendientes = historialPermanente
-              .filter(anterior => {
-                const claveAnterior = claveDispensacion(anterior);
-                const activacionAnterior = String(anterior.fecha_activacion || "").trim();
-                const caducidadAnterior = String(anterior.fecha_caducidad || "").trim();
-                return !usadosEnEstaFusion.has(claveAnterior) &&
-                  !retiradaConfirmadaSergas(anterior) &&
-                  normalizarMedicamento(anterior.medicamento) === nombreNormalizado &&
-                  activacionAnterior &&
-                  activacionAnterior <= fechaRetiradaSergas &&
-                  (!caducidadAnterior || fechaRetiradaSergas <= caducidadAnterior);
-              })
-              .sort((a, b) =>
-                String(a.fecha_activacion || "").localeCompare(String(b.fecha_activacion || "")) ||
-                String(a.fecha_caducidad || "").localeCompare(String(b.fecha_caducidad || ""))
-              );
-
-            const candidatosManuales = candidatosPendientes.filter(anterior =>
-              String(fechaRetirada(anterior) || "").slice(0, 10) === fechaRetiradaSergas
-            );
-
-            candidato = candidatosManuales.length
-              ? candidatosManuales[0]
-              : (candidatosPendientes.length ? candidatosPendientes[0] : null);
-
-            if (candidato) {
-              usadosEnEstaFusion.add(claveDispensacion(candidato));
-            }
-          }
-
-          if (candidato) {
-            item.fecha_activacion = candidato.fecha_activacion;
+          if (posicion !== -1) {
+            const anterior = candidatos.splice(posicion, 1)[0];
+            indice.delete(claveDispensacion(anterior));
+            item.fecha_activacion = anterior.fecha_activacion;
           }
         }
 
