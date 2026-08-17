@@ -2048,19 +2048,22 @@
           String(a.fecha_caducidad || "").localeCompare(String(b.fecha_caducidad || ""))
         );
 
-        const cantidad = Math.min(candidatos.length, nuevasPendientes.length);
-        for (let i = 0; i < cantidad; i += 1) {
-          const anterior = candidatos[i];
-          const retirada = nuevasPendientes[i];
+        for (const retirada of nuevasPendientes) {
           const fechaRetirada = String(
             retirada.fecha_retirada_sergas || retirada.fecha_activacion || ""
           ).slice(0, 10);
-          const fechaActivacion = String(anterior.fecha_activacion || "").slice(0, 10);
 
-          if (fechaActivacion && fechaRetirada && fechaActivacion <= fechaRetirada) {
-            activacionOriginalPorRetirada.set(retirada, anterior.fecha_activacion);
-            indice.delete(claveDispensacion(anterior));
-          }
+          const indiceCompatible = candidatos.findIndex(anterior => {
+            const fechaActivacion = String(anterior.fecha_activacion || "").slice(0, 10);
+            return fechaActivacion && fechaRetirada && fechaActivacion <= fechaRetirada;
+          });
+
+          if (indiceCompatible < 0) continue;
+
+          const anterior = candidatos[indiceCompatible];
+          activacionOriginalPorRetirada.set(retirada, anterior.fecha_activacion);
+          indice.delete(claveDispensacion(anterior));
+          candidatos.splice(indiceCompatible, 1);
         }
       }
 
