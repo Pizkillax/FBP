@@ -1019,7 +1019,7 @@
       <div class="ajustes-info">
         <strong>FBP</strong><br>
         Farmacia Baiona Pacientes
-        <div class="ajustes-version">Versión 2.1.1 QR PRUEBA</div>
+        <div class="ajustes-version">Versión 2.1.2 QR LECTOR PRUEBA</div>
 
         <hr class="ajustes-separador">
 
@@ -1479,7 +1479,7 @@
       if (camaraVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
           camaraVideo.videoWidth && camaraVideo.videoHeight &&
           typeof jsQR === "function") {
-        const anchoMaximo = 640;
+        const anchoMaximo = 960;
         const escala = Math.min(1, anchoMaximo / camaraVideo.videoWidth);
         lienzoQr.width = Math.round(camaraVideo.videoWidth * escala);
         lienzoQr.height = Math.round(camaraVideo.videoHeight * escala);
