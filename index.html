@@ -998,6 +998,7 @@
   </header>
 
   <input id="archivoJson" type="file" accept=".json,application/json">
+  <input id="archivoBackup" type="file" accept=".json,application/json">
 
   <div id="modalAjustes" class="modal-fondo oculto" role="dialog" aria-modal="true" aria-labelledby="tituloAjustes">
     <section class="modal-ajustes">
@@ -1010,6 +1011,8 @@
         <button id="actualizarDatosBtn" class="primario">🔄 Actualizar datos</button>
         <button id="instalarBtn" class="secundario oculto">📱 Instalar aplicación</button>
         <button id="cambiarPacienteBtn" class="secundario oculto">👥 Cambiar paciente</button>
+        <button id="crearBackupBtn" class="secundario">💾 Crear copia de seguridad</button>
+        <button id="restaurarBackupBtn" class="secundario">♻️ Restaurar copia de seguridad</button>
         <button id="sugerenciasBtn" class="secundario">💬 Sugerencias y dudas</button>
         <button id="borrarBtn" class="peligro oculto">🗑️ Eliminar perfil</button>
       </div>
@@ -1019,7 +1022,7 @@
       <div class="ajustes-info">
         <strong>FBP</strong><br>
         Farmacia Baiona Pacientes
-        <div class="ajustes-version">Versión 2.1.2 QR LECTOR PRUEBA</div>
+        <div class="ajustes-version">Versión 2.2.0 BACKUP PRUEBA</div>
 
         <hr class="ajustes-separador">
 
@@ -1260,6 +1263,9 @@
     const entendidoInstalacionBtn = document.getElementById("entendidoInstalacionBtn");
     const textoInstalacion = document.getElementById("textoInstalacion");
     const cambiarPacienteBtn = document.getElementById("cambiarPacienteBtn");
+    const crearBackupBtn = document.getElementById("crearBackupBtn");
+    const restaurarBackupBtn = document.getElementById("restaurarBackupBtn");
+    const archivoBackup = document.getElementById("archivoBackup");
     const sugerenciasBtn = document.getElementById("sugerenciasBtn");
     const borrarBtn = document.getElementById("borrarBtn");
     const probarCamaraBtn = document.getElementById("probarCamaraBtn");
@@ -1479,7 +1485,7 @@
       if (camaraVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
           camaraVideo.videoWidth && camaraVideo.videoHeight &&
           typeof jsQR === "function") {
-        const anchoMaximo = 960;
+        const anchoMaximo = 640;
         const escala = Math.min(1, anchoMaximo / camaraVideo.videoWidth);
         lienzoQr.width = Math.round(camaraVideo.videoWidth * escala);
         lienzoQr.height = Math.round(camaraVideo.videoHeight * escala);
@@ -1752,6 +1758,137 @@
 
     function numeroPacientes() {
       return Object.keys(indicePacientes.pacientes).length;
+    }
+
+
+    function crearContenidoBackup() {
+      const pacientes = {};
+
+      for (const cip of Object.keys(indicePacientes.pacientes)) {
+        const datosTexto = localStorage.getItem(clavePaciente(CLAVE_DATOS, cip));
+        const retiradasTexto = localStorage.getItem(clavePaciente(CLAVE_RETIRADAS, cip));
+        const historialTexto = localStorage.getItem(clavePaciente(CLAVE_HISTORIAL, cip));
+
+        pacientes[cip] = {
+          datos: datosTexto !== null ? JSON.parse(datosTexto) : null,
+          retiradas: retiradasTexto !== null ? JSON.parse(retiradasTexto) : {},
+          historial: historialTexto !== null ? JSON.parse(historialTexto) : []
+        };
+      }
+
+      return {
+        formato: "farmacia_baiona_backup",
+        version_formato: 1,
+        creado_el: new Date().toISOString(),
+        indice_pacientes: JSON.parse(JSON.stringify(indicePacientes)),
+        pacientes
+      };
+    }
+
+    function validarBackup(contenido) {
+      if (!contenido || contenido.formato !== "farmacia_baiona_backup" || contenido.version_formato !== 1) {
+        throw new Error("El archivo no es una copia de seguridad válida de FBP.");
+      }
+
+      const indice = contenido.indice_pacientes;
+      if (!indice || typeof indice !== "object" || !indice.pacientes || typeof indice.pacientes !== "object") {
+        throw new Error("La copia no contiene un índice de pacientes válido.");
+      }
+      if (!contenido.pacientes || typeof contenido.pacientes !== "object" || Array.isArray(contenido.pacientes)) {
+        throw new Error("La copia no contiene los datos de pacientes esperados.");
+      }
+
+      const cipsIndice = Object.keys(indice.pacientes);
+      for (const cip of cipsIndice) {
+        const cipNormalizado = String(cip || "").trim().toLocaleUpperCase("es-ES");
+        if (!cipNormalizado || cipNormalizado !== cip) {
+          throw new Error("La copia contiene un identificador de paciente no válido.");
+        }
+
+        const bloque = contenido.pacientes[cip];
+        if (!bloque || typeof bloque !== "object") {
+          throw new Error("Faltan datos de uno de los pacientes de la copia.");
+        }
+
+        if (bloque.datos !== null) {
+          validarDatos(bloque.datos);
+          const cipDatos = obtenerCipPaciente(bloque.datos);
+          if (cipDatos && cipDatos !== cip) {
+            throw new Error("Los datos de un paciente no coinciden con su perfil en la copia.");
+          }
+        }
+
+        if (!bloque.retiradas || typeof bloque.retiradas !== "object" || Array.isArray(bloque.retiradas)) {
+          throw new Error("Las retiradas de uno de los pacientes no tienen un formato válido.");
+        }
+        if (!Array.isArray(bloque.historial)) {
+          throw new Error("El historial de uno de los pacientes no tiene un formato válido.");
+        }
+      }
+
+      const cipGuardado = String(indice.cipActivo || "").trim().toLocaleUpperCase("es-ES");
+      if (cipGuardado && !indice.pacientes[cipGuardado]) {
+        throw new Error("El paciente activo de la copia no existe en su índice.");
+      }
+
+      return cipsIndice.length;
+    }
+
+    async function crearBackup() {
+      try {
+        const contenido = crearContenidoBackup();
+        const texto = JSON.stringify(contenido, null, 2);
+        const fecha = new Date();
+        const dos = valor => String(valor).padStart(2, "0");
+        const nombre = `FBP_backup_${fecha.getFullYear()}${dos(fecha.getMonth() + 1)}${dos(fecha.getDate())}_${dos(fecha.getHours())}${dos(fecha.getMinutes())}.json`;
+        const archivo = new File([texto], nombre, { type: "application/json" });
+
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [archivo] })) {
+          await navigator.share({ files: [archivo], title: "Copia de seguridad de FBP" });
+        } else {
+          const url = URL.createObjectURL(archivo);
+          const enlace = document.createElement("a");
+          enlace.href = url;
+          enlace.download = nombre;
+          document.body.appendChild(enlace);
+          enlace.click();
+          enlace.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+      } catch (error) {
+        if (error && error.name === "AbortError") return;
+        alert(`No se pudo crear la copia de seguridad:\n${error.message}`);
+      }
+    }
+
+    function borrarDatosFBPParaRestaurar() {
+      const claves = [];
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const clave = localStorage.key(i);
+        if (
+          clave === CLAVE_PACIENTES ||
+          clave === CLAVE_DATOS || clave.startsWith(`${CLAVE_DATOS}_`) ||
+          clave === CLAVE_RETIRADAS || clave.startsWith(`${CLAVE_RETIRADAS}_`) ||
+          clave === CLAVE_HISTORIAL || clave.startsWith(`${CLAVE_HISTORIAL}_`)
+        ) {
+          claves.push(clave);
+        }
+      }
+      claves.forEach(clave => localStorage.removeItem(clave));
+    }
+
+    function aplicarBackup(contenido) {
+      borrarDatosFBPParaRestaurar();
+
+      for (const [cip, bloque] of Object.entries(contenido.pacientes)) {
+        if (bloque.datos !== null) {
+          localStorage.setItem(clavePaciente(CLAVE_DATOS, cip), JSON.stringify(bloque.datos));
+        }
+        localStorage.setItem(clavePaciente(CLAVE_RETIRADAS, cip), JSON.stringify(bloque.retiradas));
+        localStorage.setItem(clavePaciente(CLAVE_HISTORIAL, cip), JSON.stringify(bloque.historial));
+      }
+
+      localStorage.setItem(CLAVE_PACIENTES, JSON.stringify(contenido.indice_pacientes));
     }
 
     function actualizarBotonCambiarPaciente() {
@@ -3078,6 +3215,40 @@
     cambiarPacienteBtn.addEventListener("click", () => {
       cerrarAjustes();
       mostrarSelectorPacientes();
+    });
+
+    crearBackupBtn.addEventListener("click", async () => {
+      await crearBackup();
+    });
+
+    restaurarBackupBtn.addEventListener("click", () => {
+      archivoBackup.value = "";
+      archivoBackup.click();
+    });
+
+    archivoBackup.addEventListener("change", async evento => {
+      const archivo = evento.target.files[0];
+      if (!archivo) return;
+
+      try {
+        const texto = await archivo.text();
+        const contenido = JSON.parse(texto);
+        const numero = validarBackup(contenido);
+        const confirmado = await confirmarFBP(
+          "Restaurar copia de seguridad",
+          `Esta copia contiene ${numero} ${numero === 1 ? "paciente" : "pacientes"}. Al restaurarla se sustituirán todos los datos actuales de FBP.`,
+          "Restaurar"
+        );
+        if (!confirmado) return;
+
+        aplicarBackup(contenido);
+        alert("Copia de seguridad restaurada correctamente.");
+        window.location.reload();
+      } catch (error) {
+        alert(`No se pudo restaurar la copia de seguridad:\n${error.message}`);
+      } finally {
+        archivoBackup.value = "";
+      }
     });
     sugerenciasBtn.addEventListener("click", () => {
       const asunto = encodeURIComponent("FBP – Sugerencia o duda");
