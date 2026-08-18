@@ -1022,7 +1022,7 @@
       <div class="ajustes-info">
         <strong>FBP</strong><br>
         Farmacia Baiona Pacientes
-        <div class="ajustes-version">Versión 2.2.0 BACKUP PRUEBA</div>
+        <div class="ajustes-version">Versión 2.2.2 NOMBRE COMPUESTO PRUEBA</div>
 
         <hr class="ajustes-separador">
 
@@ -1659,7 +1659,26 @@
 
     function primerNombre(nombreCompleto) {
       const limpio = String(nombreCompleto || "").trim();
-      return limpio ? limpio.split(/\s+/)[0] : "Paciente";
+      if (!limpio) return "Paciente";
+
+      const partes = limpio.split(/\s+/);
+      if (partes.length === 1) return partes[0];
+
+      const particulas = new Set(["de", "del", "la", "las", "los"]);
+      const resultado = [partes[0]];
+      let i = 1;
+
+      if (particulas.has(partes[i].toLocaleLowerCase("es-ES"))) {
+        while (i < partes.length && particulas.has(partes[i].toLocaleLowerCase("es-ES"))) {
+          resultado.push(partes[i]);
+          i += 1;
+        }
+        if (i < partes.length) resultado.push(partes[i]);
+      } else {
+        resultado.push(partes[i]);
+      }
+
+      return resultado.join(" ");
     }
 
     function normalizarMedicamento(nombre) {
