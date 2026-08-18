@@ -1019,7 +1019,7 @@
       <div class="ajustes-info">
         <strong>FBP</strong><br>
         Farmacia Baiona Pacientes
-        <div class="ajustes-version">Versión 2.1.0</div>
+        <div class="ajustes-version">Versión 2.1.1 QR PRUEBA</div>
 
         <hr class="ajustes-separador">
 
@@ -2210,7 +2210,50 @@
         .pipeThrough(new DecompressionStream("gzip"));
 
       const texto = await new Response(flujo).text();
-      return JSON.parse(texto);
+      const datos = JSON.parse(texto);
+
+      if (!Array.isArray(datos) || datos[0] !== "FBP2") {
+        return datos;
+      }
+
+      const [, generadoEl, nombrePaciente, cipPaciente, medicamentos, filas] = datos;
+      const restaurarFecha = valor => {
+        if (!valor) return null;
+        return `${valor.slice(0, 4)}-${valor.slice(4, 6)}-${valor.slice(6, 8)}`;
+      };
+
+      return {
+        formato: "farmacia_baiona_dispensaciones",
+        version_formato: 1,
+        generado_el: generadoEl,
+        farmacia: {
+          nombre: "FARMACIA BAIONA",
+          direccion: "CARABELA LA PINTA 13",
+          telefono: "986385252"
+        },
+        paciente: {
+          nombre: nombrePaciente,
+          cip: cipPaciente
+        },
+        dispensaciones: filas.map(fila => {
+          const [activacion, caducidad, indiceMedicamento, flags, retiradaSergas] = fila;
+          const item = {
+            fecha_activacion: restaurarFecha(activacion),
+            fecha_caducidad: restaurarFecha(caducidad),
+            medicamento: medicamentos[indiceMedicamento],
+            ultima: Boolean(flags & 1)
+          };
+
+          if (flags & 2) {
+            item.recogida_sergas = true;
+          }
+          if (retiradaSergas) {
+            item.fecha_retirada_sergas = restaurarFecha(retiradaSergas);
+          }
+
+          return item;
+        })
+      };
     }
 
     function obtenerPayloadFbp() {
