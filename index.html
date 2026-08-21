@@ -1022,7 +1022,7 @@
       <div class="ajustes-info">
         <strong>FBP</strong><br>
         Farmacia Baiona Pacientes
-        <div class="ajustes-version">Versión 2.2.3 PLAZO VENCIDO PRUEBA</div>
+        <div class="ajustes-version">Versión 2.2.4 FIN TRATAMIENTO PRUEBA</div>
 
         <hr class="ajustes-separador">
 
@@ -2036,10 +2036,18 @@
       return item?.no_recogida_confirmada === true;
     }
 
+    function finTratamientoConfirmado(item) {
+      return item?.fin_tratamiento_confirmado === true;
+    }
+
     function estadoDispensacion(item) {
       if (estaRetirada(item)) return "retirada";
 
       const hoy = fechaLocalISO();
+
+      if (item.fecha_fin_tratamiento && hoy > item.fecha_fin_tratamiento) {
+        return "fin_tratamiento";
+      }
 
       if (item.fecha_caducidad && hoy > item.fecha_caducidad) {
         return "caducada";
@@ -2231,20 +2239,45 @@
       }
 
       const fechaActualizacion = String(datos.generado_el || fechaLocalISO()).slice(0, 10);
+      const medicamentosNuevos = new Set(
+        datos.dispensaciones.map(item => normalizarMedicamento(item.medicamento))
+      );
+
       for (const item of desaparecidas) {
         if (desaparecidasEmparejadas.has(item)) continue;
-        const caducidad = String(item.fecha_caducidad || "").slice(0, 10);
-        if (!caducidad || !fechaActualizacion || caducidad >= fechaActualizacion) continue;
 
         const clave = claveDispensacion(item);
         const anterior = indice.get(clave) || item;
-        indice.set(clave, { ...anterior, no_recogida_confirmada: true });
+        const finTratamiento = String(item.fecha_fin_tratamiento || "").slice(0, 10);
+        const medicamentoSiguePresente = medicamentosNuevos.has(normalizarMedicamento(item.medicamento));
+
+        if (finTratamiento && fechaActualizacion && finTratamiento < fechaActualizacion && !medicamentoSiguePresente) {
+          indice.set(clave, {
+            ...anterior,
+            fin_tratamiento_confirmado: true,
+            no_recogida_confirmada: false
+          });
+          continue;
+        }
+
+        const caducidad = String(item.fecha_caducidad || "").slice(0, 10);
+        if (!caducidad || !fechaActualizacion || caducidad >= fechaActualizacion) continue;
+
+        indice.set(clave, {
+          ...anterior,
+          no_recogida_confirmada: true,
+          fin_tratamiento_confirmado: false
+        });
       }
 
       for (const itemOriginal of datos.dispensaciones) {
         if (retiradasConocidas.has(itemOriginal)) continue;
 
-        let item = { ...itemOriginal, no_recogida_confirmada: false };
+        let item = {
+          ...itemOriginal,
+          no_recogida_confirmada: false,
+          fin_tratamiento_confirmado: false
+        };
         if (activacionOriginalPorRetirada.has(itemOriginal)) {
           item.fecha_activacion = activacionOriginalPorRetirada.get(itemOriginal);
         }
@@ -2288,21 +2321,27 @@
         retiradas.sort((a, b) => String(fechaRetirada(b)).localeCompare(String(fechaRetirada(a))));
         const noRecogidas = ordenadas.filter(item => noRecogidaConfirmada(item));
         noRecogidas.sort((a, b) => String(b.fecha_caducidad || "").localeCompare(String(a.fecha_caducidad || "")));
+        const finesTratamiento = ordenadas.filter(item => finTratamientoConfirmado(item));
+        finesTratamiento.sort((a, b) => String(b.fecha_fin_tratamiento || "").localeCompare(String(a.fecha_fin_tratamiento || "")));
 
         const ultimaRetirada = retiradas.length ? fechaRetirada(retiradas[0]) : "";
         const ultimaNoRecogida = noRecogidas.length ? String(noRecogidas[0].fecha_caducidad || "") : "";
-        const ultimaFecha = [ultimaRetirada, ultimaNoRecogida].filter(Boolean).sort().at(-1) || "";
-        const ultimoEsNoRecogida = Boolean(ultimaNoRecogida && ultimaNoRecogida >= ultimaRetirada);
+        const ultimoFinTratamiento = finesTratamiento.length ? String(finesTratamiento[0].fecha_fin_tratamiento || "") : "";
+        const ultimaFecha = [ultimaRetirada, ultimaNoRecogida, ultimoFinTratamiento].filter(Boolean).sort().at(-1) || "";
+        const ultimoEsFinTratamiento = Boolean(ultimoFinTratamiento && ultimoFinTratamiento >= ultimaRetirada && ultimoFinTratamiento >= ultimaNoRecogida);
+        const ultimoEsNoRecogida = !ultimoEsFinTratamiento && Boolean(ultimaNoRecogida && ultimaNoRecogida >= ultimaRetirada);
 
         return {
           nombre: ordenadas[0].medicamento,
           items: ordenadas,
           activo: actuales.has(normalizarMedicamento(ordenadas[0].medicamento)),
-          numeroRegistros: retiradas.length + noRecogidas.length,
+          numeroRegistros: retiradas.length + noRecogidas.length + finesTratamiento.length,
           ultimaRetirada,
           ultimaNoRecogida,
+          ultimoFinTratamiento,
           ultimaFecha,
-          ultimoEsNoRecogida
+          ultimoEsNoRecogida,
+          ultimoEsFinTratamiento
         };
       }).filter(grupo => grupo.numeroRegistros > 0)
         .filter(grupo => !filtro || grupo.nombre.toLocaleUpperCase("es-ES").includes(filtro))
@@ -2319,11 +2358,13 @@
         <article class="medicamento" data-medicamento-historial="${encodeURIComponent(grupo.nombre)}">
           <strong>${escaparHtml(grupo.nombre)}</strong>
           <span class="etiqueta ${grupo.activo ? "" : "etiqueta-retirada"}">${grupo.activo ? "En tratamiento" : "Tratamiento finalizado"}</span>
-          <div class="fila-caducidad">${grupo.ultimoEsNoRecogida
-            ? `Medicamento no recogido dentro del plazo · El plazo finalizó el ${escaparHtml(fechaCortaBonita(grupo.ultimaNoRecogida))}`
-            : grupo.ultimaRetirada
-              ? `Última retirada: ${escaparHtml(fechaRetiradaBonita(grupo.ultimaRetirada))}`
-              : "Sin registros"}</div>
+          <div class="fila-caducidad">${grupo.ultimoEsFinTratamiento
+            ? `Tratamiento finalizado · La duración prevista finalizó el ${escaparHtml(fechaCortaBonita(grupo.ultimoFinTratamiento))}`
+            : grupo.ultimoEsNoRecogida
+              ? `Medicamento no recogido dentro del plazo · El plazo finalizó el ${escaparHtml(fechaCortaBonita(grupo.ultimaNoRecogida))}`
+              : grupo.ultimaRetirada
+                ? `Última retirada: ${escaparHtml(fechaRetiradaBonita(grupo.ultimaRetirada))}`
+                : "Sin registros"}</div>
         </article>
       `).join("");
     }
@@ -2423,7 +2464,7 @@
           cip: cipPaciente
         },
         dispensaciones: filas.map(fila => {
-          const [activacion, caducidad, indiceMedicamento, flags, retiradaSergas] = fila;
+          const [activacion, caducidad, indiceMedicamento, flags, retiradaSergas, finTratamiento] = fila;
           const item = {
             fecha_activacion: restaurarFecha(activacion),
             fecha_caducidad: restaurarFecha(caducidad),
@@ -2436,6 +2477,9 @@
           }
           if (retiradaSergas) {
             item.fecha_retirada_sergas = restaurarFecha(retiradaSergas);
+          }
+          if (finTratamiento) {
+            item.fecha_fin_tratamiento = restaurarFecha(finTratamiento);
           }
 
           return item;
@@ -2663,6 +2707,8 @@
             etiquetaEstado = '<span class="etiqueta etiqueta-retirada">✓ Retirada</span>';
           } else if (estado === "caducada") {
             etiquetaEstado = '<span class="etiqueta etiqueta-caducada">Plazo vencido</span>';
+          } else if (estado === "fin_tratamiento") {
+            etiquetaEstado = '<span class="etiqueta etiqueta-caducada">Tratamiento finalizado</span>';
           }
 
           html += `<article class="medicamento ${estado === "retirada" ? "retirada" : ""}" data-medicamento="${encodeURIComponent(item.medicamento)}">
@@ -2673,7 +2719,9 @@
               : ""}
             ${estado === "caducada"
               ? '<div class="fila-caducidad"><strong>Ha vencido el plazo para recoger esta receta.</strong><br>Para conocer su situación, actualice FBP con un nuevo QR de Farmacia Baiona.</div>'
-              : ""}
+              : estado === "fin_tratamiento"
+                ? '<div class="fila-caducidad"><strong>Ha finalizado la duración prevista de este tratamiento.</strong><br>Para conocer su situación, actualice FBP con un nuevo QR de Farmacia Baiona.</div>'
+                : ""}
             ${item.ultima ? '<div class="aviso-ultima-listado"><strong>★ Última del listado</strong><span>No hay recetas posteriores en este listado</span></div>' : ""}
           </article>`;
         }
@@ -2692,7 +2740,7 @@
 
       const visibles = datosActuales.dispensaciones.filter(item => {
         const estado = estadoDispensacion(item);
-        return estado === "disponible" || estado === "pendiente" || estado === "caducada";
+        return estado === "disponible" || estado === "pendiente" || estado === "caducada" || estado === "fin_tratamiento";
       });
 
       if (!visibles.length) {
@@ -2740,7 +2788,7 @@
     function renderizarDispensacionesDetalle() {
       const visibles = dispensacionesDetalleActual.filter(item => {
         const estado = estadoDispensacion(item);
-        return estado === "disponible" || estado === "pendiente" || estado === "caducada";
+        return estado === "disponible" || estado === "pendiente" || estado === "caducada" || estado === "fin_tratamiento";
       });
 
       if (!visibles.length) {
@@ -2762,6 +2810,8 @@
             data-nombre="${encodeURIComponent(item.medicamento)}">✓ Marcar como retirado</button>`;
         } else if (estado === "caducada") {
           etiqueta = '<span class="etiqueta etiqueta-caducada">Plazo vencido</span>';
+        } else if (estado === "fin_tratamiento") {
+          etiqueta = '<span class="etiqueta etiqueta-caducada">Tratamiento finalizado</span>';
         }
 
         const avisoUltima = item.ultima
@@ -2777,7 +2827,9 @@
             <div class="fila-dispensacion-estado">${etiqueta}</div>
             ${estado === "caducada"
               ? '<div class="fila-caducidad"><strong>Ha vencido el plazo para recoger esta receta.</strong><br>Para conocer su situación, actualice FBP con un nuevo QR de Farmacia Baiona.</div>'
-              : ""}
+              : estado === "fin_tratamiento"
+                ? '<div class="fila-caducidad"><strong>Ha finalizado la duración prevista de este tratamiento.</strong><br>Para conocer su situación, actualice FBP con un nuevo QR de Farmacia Baiona.</div>'
+                : ""}
             ${avisoUltima}
           </div>
           ${accion}
@@ -3066,14 +3118,26 @@
 
     function abrirDetalleHistorial(nombreMedicamento) {
       const claveNombre = normalizarMedicamento(nombreMedicamento);
-      const dispensaciones = historialPermanente
+      const dispensacionesBase = historialPermanente
         .filter(item => normalizarMedicamento(item.medicamento) === claveNombre)
-        .filter(item => (estaRetirada(item) && fechaRetirada(item)) || noRecogidaConfirmada(item))
+        .filter(item => (estaRetirada(item) && fechaRetirada(item)) || noRecogidaConfirmada(item) || finTratamientoConfirmado(item))
         .sort((a, b) => {
-          const fechaA = noRecogidaConfirmada(a) ? String(a.fecha_caducidad || "") : String(fechaRetirada(a) || a.fecha_activacion || "");
-          const fechaB = noRecogidaConfirmada(b) ? String(b.fecha_caducidad || "") : String(fechaRetirada(b) || b.fecha_activacion || "");
-          return fechaB.localeCompare(fechaA);
+          const fechaEvento = item => finTratamientoConfirmado(item)
+            ? String(item.fecha_fin_tratamiento || "")
+            : noRecogidaConfirmada(item)
+              ? String(item.fecha_caducidad || "")
+              : String(fechaRetirada(item) || item.fecha_activacion || "");
+          return fechaEvento(b).localeCompare(fechaEvento(a));
         });
+
+      const finesYaMostrados = new Set();
+      const dispensaciones = dispensacionesBase.filter(item => {
+        if (!finTratamientoConfirmado(item)) return true;
+        const fecha = String(item.fecha_fin_tratamiento || "");
+        if (finesYaMostrados.has(fecha)) return false;
+        finesYaMostrados.add(fecha);
+        return true;
+      });
 
       if (!dispensaciones.length) {
         if (!vistaDetalleHistorial.classList.contains("oculto")) {
@@ -3087,6 +3151,15 @@
       detalleHistorialNombre.textContent = nombreMedicamento;
       detalleHistorialEstado.innerHTML = `<span class="etiqueta ${activo ? "" : "etiqueta-retirada"}">${activo ? "En tratamiento" : "Tratamiento finalizado"}</span>`;
       detalleHistorialFechas.innerHTML = dispensaciones.map(item => {
+        if (finTratamientoConfirmado(item)) {
+          return `<div class="fila-dispensacion caducada">
+            <div class="fila-dispensacion-contenido">
+              <div class="fila-fecha"><strong>Tratamiento finalizado</strong></div>
+              <div class="fila-caducidad">La duración prevista del tratamiento finalizó el ${escaparHtml(fechaCortaBonita(item.fecha_fin_tratamiento))}.</div>
+            </div>
+          </div>`;
+        }
+
         if (noRecogidaConfirmada(item)) {
           return `<div class="fila-dispensacion caducada">
             <div class="fila-dispensacion-contenido">
